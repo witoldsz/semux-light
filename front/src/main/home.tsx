@@ -5,10 +5,10 @@ import BigNumber from 'bignumber.js'
 import { ZERO } from './lib/utils'
 import { DateTime } from 'luxon'
 
-export const Home = () => (s: State) => (
+export const HomeView = () => (s: State) => (
   <div class="pa2 flex">
     <div class="">
-      <div class="mw5 mw6-ns hidden ba mv4">
+      <div class="mw5 mw6-ns hidden ba">
         <h1 class="f5 bg-near-black white mv0 pv2 ph3">Overview</h1>
         <div class="pa3">
           <dl class="f6 lh-title mv2">
@@ -50,7 +50,7 @@ export const Home = () => (s: State) => (
     </div>
 
     <div class="">
-      <div class="ml3 mw5 mw6-ns hidden ba mv4">
+      <div class="ml3 mw5 mw6-ns hidden ba">
         <h1 class="f5 bg-near-black white mv0 pv2 ph3">Transactions</h1>
         <div class="pa3">
           <div class="flex">

@@ -1,6 +1,6 @@
 import { h, app } from 'hyperapp'
 import { NavView, Nav } from './nav'
-import { Home } from './home'
+import { HomeView } from './home'
 import { Route } from './lib/location'
 import * as location from './lib/location'
 import { addresses } from './model/wallet'
@@ -8,6 +8,9 @@ import { BriefRemote, Account } from './model/api'
 import BigNumber from 'bignumber.js'
 import { DateTime } from 'luxon'
 import { Maybe, maybe } from 'tsmonad'
+import { TransactionsView } from './transactions'
+import { DelegatesView } from './delegates'
+import { SendView } from './send'
 
 export interface State {
   location: location.LocationState
@@ -56,7 +59,10 @@ const view = (s: State, a: Actions) => (
   <div class="w-100 sans-serif">
     <h1 class="pa2">Semux Light</h1>
     <NavView />
-    <Route path={Nav.Home} render={Home} />
+    <Route path={Nav.Home} render={HomeView} />
+    <Route path={Nav.Send} render={SendView} />
+    <Route path={Nav.Transactions} render={TransactionsView} />
+    <Route path={Nav.Delegates} render={DelegatesView} />
     <pre> {JSON.stringify(s, null, 4)}</pre>
   </div>
 )

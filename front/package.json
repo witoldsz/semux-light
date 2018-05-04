@@ -16,10 +16,13 @@
   "license": "ISC",
   "devDependencies": {
     "@hyperapp/router": "^0.7.0",
+    "@types/long": "^4.0.0",
     "@types/luxon": "^0.5.2",
     "bignumber.js": "^7.0.1",
     "hyperapp": "^1.2.5",
+    "long": "^4.0.0",
     "luxon": "^1.2.0",
+    "semux": "^1.1.1",
     "tachyons": "^4.9.1",
     "ts-loader": "^4.2.0",
     "tslint": "^5.9.1",
@@ -27,5 +30,8 @@
     "typescript": "^2.8.3",
     "webpack": "^4.6.0",
     "webpack-cli": "^2.0.15"
+  },
+  "dependencies": {
+    "webpack-bundle-analyzer": "^2.11.1"
   }
 }

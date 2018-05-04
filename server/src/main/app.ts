@@ -10,20 +10,16 @@ async function main() {
   const app = express()
   app.use(express.static(staticsPath))
 
-  // proxy not used anymore (as of now) in favour of '/brief'
-  // will propably remove this or find a use case
-  // (like fetching transactions or publishing raw txs)
   {
     const proxy = httpProxy.createProxy({
       target: 'http://localhost:5171',
       auth: 'user:123456',
     })
-    const middleware = (req, res, next) => {
+    const proxyMiddleware = (req, res, next) => {
       proxy.web(req, res, undefined, console.error)
     }
 
-    app.get('/v2.0.0/account', middleware)
-    app.get('/v2.0.0/account/transactions', middleware)
+    app.post('/v2.0.0/transaction/raw', proxyMiddleware)
   }
 
   {

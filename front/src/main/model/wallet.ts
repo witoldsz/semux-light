@@ -1,4 +1,5 @@
 import { BigNumber } from 'bignumber.js'
+import * as Long from 'long'
 import { Maybe, maybe } from 'tsmonad'
 import { State } from '../app'
 import { Account } from './api'
@@ -18,4 +19,9 @@ export function addressAbbr(a: Account): string {
 
 export function sem(amount: BigNumber): string {
   return `${amount.toFormat(2)} SEM`
+}
+
+export function nonce(s: State, address: string) {
+  const acc = s.accounts.find(({ address: a }) => address === a)
+  return acc ? acc.nonce : Long.ZERO
 }

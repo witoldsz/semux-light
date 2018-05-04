@@ -1,3 +1,4 @@
+import * as Long from 'long'
 import { h, app } from 'hyperapp'
 import { NavView, Nav } from './nav'
 import { HomeView } from './home'
@@ -10,13 +11,15 @@ import { DateTime } from 'luxon'
 import { Maybe, maybe } from 'tsmonad'
 import { TransactionsView } from './transactions'
 import { DelegatesView } from './delegates'
-import { SendView } from './send'
+import { SendView, SendState, initialSendState, SendActions, rawSendActions } from './send'
+import * as semux from 'semux'
 
 export interface State {
   location: location.LocationState
   blockNumber: Maybe<BigNumber>
   blockTime: Maybe<DateTime>
   accounts: Account[]
+  send: SendState
 }
 
 const initialState: State = {
@@ -24,12 +27,14 @@ const initialState: State = {
   blockNumber: Maybe.nothing(),
   blockTime: Maybe.nothing(),
   accounts: [],
+  send: initialSendState,
 }
 
 export interface Actions {
   location: location.LocationActions
   briefFetch: () => (s: State, a: Actions) => void
   briefResponse: (response: BriefRemote) => (s: State, a: Actions) => State
+  send: SendActions
 }
 
 const rawActions: Actions = {
@@ -48,11 +53,12 @@ const rawActions: Actions = {
         address: ra.address,
         available: new BigNumber(ra.available).div(1e9),
         locked: new BigNumber(ra.locked).div(1e9),
-        nonce: new BigNumber(ra.nonce),
+        nonce: Long.fromString(ra.nonce),
         transactionCount: ra.transactionCount,
       })),
     }
   },
+  send: rawSendActions,
 }
 
 const view = (s: State, a: Actions) => (

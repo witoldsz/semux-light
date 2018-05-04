@@ -1,6 +1,7 @@
 const path = require('path')
 
 module.exports = {
+  mode: 'development',
   entry: "./src/main/app.tsx",
   output: {
     path: path.resolve(__dirname, "dist"),
@@ -16,5 +17,7 @@ module.exports = {
       { test: /\.tsx?$/, loader: "ts-loader" }
     ]
   },
-  mode: 'development'
+  externals: [{
+    xmlhttprequest: '{XMLHttpRequest:XMLHttpRequest}'
+  }]
 }

@@ -18,7 +18,7 @@ async function main() {
     const proxyMiddleware = (req, res, next) => {
       proxy.web(req, res, undefined, console.error)
     }
-
+    app.get('/v2.0.0/account/transactions', proxyMiddleware)
     app.post('/v2.0.0/transaction/raw', proxyMiddleware)
   }
 

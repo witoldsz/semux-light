@@ -2,51 +2,60 @@ import * as Long from 'long'
 import { h, app } from 'hyperapp'
 import { NavView, Nav } from './nav'
 import { HomeView } from './home'
-import { Route } from './lib/location'
-import * as location from './lib/location'
+import {
+  Route, initialLocationState, LocationActions, rawLocationActions, locationSubscribe,
+} from './lib/location'
+import { LocationState } from './lib/location'
 import { addresses } from './model/wallet'
 import { BriefRemote, Account } from './model/api'
 import BigNumber from 'bignumber.js'
 import { DateTime } from 'luxon'
 import { Maybe, maybe } from 'tsmonad'
-import { TransactionsView } from './transactions'
+import {
+  TransactionsView, TxsState, initialTxsState, TxsActions,
+  rawTxsActions,
+} from './transactions'
 import { DelegatesView } from './delegates'
 import { SendView, SendState, initialSendState, SendActions, rawSendActions } from './send'
 import * as semux from 'semux'
 
 export interface State {
-  location: location.LocationState
+  location: LocationState
   blockNumber: Maybe<BigNumber>
   blockTime: Maybe<DateTime>
   accounts: Account[]
   send: SendState
+  transactions: TxsState
 }
 
 const initialState: State = {
-  location: location.blankState,
+  location: initialLocationState,
   blockNumber: Maybe.nothing(),
   blockTime: Maybe.nothing(),
   accounts: [],
   send: initialSendState,
+  transactions: initialTxsState,
 }
 
 export interface Actions {
-  location: location.LocationActions
+  location: LocationActions
   briefFetch: () => (s: State, a: Actions) => void
   briefResponse: (response: BriefRemote) => (s: State, a: Actions) => State
   send: SendActions
+  transactions: TxsActions
+
 }
 
 const rawActions: Actions = {
-  location: location.actions,
-  briefFetch: () => (s: State, a: Actions) => {
-    fetch(`/brief?addresses=${s.location.params.addr}`, { method: 'GET' })
+  location: rawLocationActions,
+  briefFetch: () => (state, actions) => {
+    fetch(`/brief?addresses=${state.location.params.addr}`, { method: 'GET' })
       .then((r) => r.json())
-      .then(a.briefResponse)
+      .then(actions.briefResponse)
   },
-  briefResponse: (r: BriefRemote) => (s: State, a: Actions) => {
+  briefResponse: (r: BriefRemote) => (state, actions) => {
     return {
-      ...s,
+      ...state,
       blockNumber: maybe(new BigNumber(r.blockNumber)),
       blockTime: maybe(DateTime.fromMillis(parseInt(r.blockTime, 10))),
       accounts: r.accounts.map((ra) => ({
@@ -59,6 +68,7 @@ const rawActions: Actions = {
     }
   },
   send: rawSendActions,
+  transactions: rawTxsActions,
 }
 
 const view = (s: State, a: Actions) => (
@@ -74,7 +84,12 @@ const view = (s: State, a: Actions) => (
 )
 
 const actions = app(initialState, rawActions, view, document.body)
-location.subscribe(actions.location)
-
+locationSubscribe(actions.location.setCurrent)
+locationSubscribe((locationState) => {
+  if (locationState.route === Nav.Transactions) {
+    actions.transactions.fetch({ locationState })
+  }
+})
 actions.briefFetch()
+
 setInterval(actions.briefFetch, 10000)

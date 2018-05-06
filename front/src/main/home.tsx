@@ -21,7 +21,9 @@ export const HomeView = () => (s: State) => (
           </dl>
           <dl class="f6 lh-title mv2">
             <dt class="dib b">Coinbase:</dt>{' '}
-            <dd class="dib ml0">{coinbase(s).fmap(addressAbbr).valueOr('')}</dd>
+            <dd class="dib ml0">
+              {coinbase(s).fmap((account) => addressAbbr(account.address)).valueOr('')}
+            </dd>
           </dl>
           <dl class="f6 lh-title mv2">
             <dt class="dib b">Available:</dt>{' '}

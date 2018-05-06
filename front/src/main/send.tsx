@@ -6,9 +6,9 @@ import { WebData, isLoading, isError, errorOf } from './lib/webdata'
 import semux from 'semux'
 import * as Long from 'long'
 import { nonce } from './model/wallet'
-import { hexBytes, log } from './lib/utils'
+import { hexBytes, log, isLeft } from './lib/utils'
 import { Either } from 'tsmonad'
-import { publishTx, SemuxApiResponse } from './model/api'
+import { publishTx } from './model/api'
 
 export interface SendState {
   from: string
@@ -16,7 +16,7 @@ export interface SendState {
   amount: Long
   data: string
   privateKey: string
-  submit: WebData<never>
+  submit: WebData<any>
 }
 
 export const initialSendState: SendState = {
@@ -35,7 +35,7 @@ export interface SendActions {
   data: (val: string) => (s: SendState) => SendState
   privateKey: (val: string) => (s: SendState) => SendState
   submit: (s: State) => (s: SendState, a: SendActions) => SendState
-  submitResponse: (r: SemuxApiResponse<any>) => (s: SendState) => SendState
+  submitResponse: (r: Either<string, any>) => (s: SendState) => SendState
 }
 
 export const rawSendActions: SendActions = {
@@ -69,7 +69,7 @@ export const rawSendActions: SendActions = {
   submitResponse: (response) => (state) => {
     return {
       ...state,
-      submit: response.success ? 'NotAsked' : Either.left(response.message),
+      submit: isLeft(response) ? 'NotAsked' : response,
     }
   },
 }

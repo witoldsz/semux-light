@@ -18,10 +18,11 @@ import {
 import { DelegatesView } from './delegates'
 import { SendView, SendState, initialSendState, SendActions, rawSendActions } from './send'
 import * as semux from 'semux'
+import { ZERO } from './lib/utils'
 
 export interface State {
   location: LocationState
-  blockNumber: Maybe<BigNumber>
+  blockNumber: BigNumber
   blockTime: Maybe<DateTime>
   accounts: Account[]
   send: SendState
@@ -30,7 +31,7 @@ export interface State {
 
 const initialState: State = {
   location: initialLocationState,
-  blockNumber: Maybe.nothing(),
+  blockNumber: ZERO,
   blockTime: Maybe.nothing(),
   accounts: [],
   send: initialSendState,
@@ -56,7 +57,7 @@ const rawActions: Actions = {
   briefResponse: (r: BriefRemote) => (state, actions) => {
     return {
       ...state,
-      blockNumber: maybe(new BigNumber(r.blockNumber)),
+      blockNumber: new BigNumber(r.blockNumber),
       blockTime: maybe(DateTime.fromMillis(parseInt(r.blockTime, 10))),
       accounts: r.accounts.map((ra) => ({
         address: ra.address,
@@ -84,12 +85,12 @@ const view = (s: State, a: Actions) => (
 )
 
 const actions = app(initialState, rawActions, view, document.body)
-locationSubscribe(actions.location.setCurrent)
+
 locationSubscribe((locationState) => {
-  if (locationState.route === Nav.Transactions) {
-    actions.transactions.fetch({ locationState })
-  }
+  actions.location.setCurrent(locationState)
+  actions.transactions.fetch({ locationState })
 })
+
 actions.briefFetch()
 
 setInterval(actions.briefFetch, 10000)

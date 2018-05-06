@@ -13,7 +13,7 @@ export const HomeView = () => (s: State) => (
         <div class="pa3">
           <dl class="f6 lh-title mv2">
             <dt class="dib b">Block #:</dt>{' '}
-            <dd class="dib ml0">{s.blockNumber.map((a) => a.toFormat()).valueOr('')}</dd>
+            <dd class="dib ml0">{s.blockNumber.gt(0) ? s.blockNumber.toFormat() : ''}</dd>
           </dl>
           <dl class="f6 lh-title mv2">
             <dt class="dib b">Block time:</dt>{' '}

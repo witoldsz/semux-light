@@ -1,4 +1,10 @@
 import { h } from 'hyperapp'
+import { DelegateType } from './model/delegate'
+
+interface DelegatesState {
+  names: { [index: string]: string },
+  list: DelegateType[]
+}
 
 export const DelegatesView = () => (
   <div class="pa2">

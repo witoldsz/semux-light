@@ -42,7 +42,7 @@ type LinkProps = { to: string } & JSX.IntrinsicElements
 export const Link = (props: LinkProps, children) => (s: State) => {
   const { to, ...otherProps } = props
   return h('a', {
-    href: `#/${to}?addr=${s.location.params.addr}`,
+    href: `#/${to}?addr=${s.location.params.addr || ''}`,
     ...otherProps,
   }, children)
 }

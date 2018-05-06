@@ -8,6 +8,7 @@ import { Either } from 'tsmonad/lib/src'
 import { fetchTxs } from './model/api'
 import { log } from './lib/utils'
 import { addressAbbr, sem } from './model/wallet'
+import { Nav } from './nav'
 
 const LIST_SIZE = 100
 
@@ -53,12 +54,13 @@ export interface TxsActions {
 
 export const rawTxsActions: TxsActions = {
   fetch: ({ locationState, newAddress }) => (state, actions) => {
+    if (locationState.route !== Nav.Transactions) {
+      return state
+    }
     const address = newAddress || state.selectedAddress || locationAddr1st(locationState)
     if (!address) {
       return state
     }
-    console.log('newAddress', newAddress)
-    console.log('address', address)
     const page = pageOf(state, address)
     fetchTxs(address, page.from, page.to).then((result) => {
       actions.fetchResult({ page, result })

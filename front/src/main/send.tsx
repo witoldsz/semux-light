@@ -8,7 +8,7 @@ import * as Long from 'long'
 import { nonce } from './model/wallet'
 import { hexBytes, log, isLeft } from './lib/utils'
 import { Either } from 'tsmonad'
-import { publishTx } from './model/api'
+import { publishTx } from './model/transaction'
 
 export interface SendState {
   from: string

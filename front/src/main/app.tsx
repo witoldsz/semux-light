@@ -80,7 +80,7 @@ const view = (s: State, a: Actions) => (
     <Route path={Nav.Send} render={SendView} />
     <Route path={Nav.Transactions} render={TransactionsView} />
     <Route path={Nav.Delegates} render={DelegatesView} />
-    <pre> {JSON.stringify(s, null, 4)}</pre>
+    {/* <pre> {JSON.stringify(s, null, 4)}</pre> */}
   </div>
 )
 

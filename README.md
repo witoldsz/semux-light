@@ -1,6 +1,10 @@
 
 # Semux Light
 
+This is alpha stage, beta version comming soon.
+
+---
+
 ![semux-light](https://raw.githubusercontent.com/witoldsz/semux-light/7019f3c572bca200ac18d8b8fd395f5fce93a340/semux-light-testnet-2018-05-02T10-42-44.png)
 
 ## Try it yourself:

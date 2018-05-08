@@ -6,7 +6,7 @@ import { WebData, isLoading, isError, errorOf } from './lib/webdata'
 import semux from 'semux'
 import * as Long from 'long'
 import { nonce } from './model/wallet'
-import { hexBytes, log, isLeft } from './lib/utils'
+import { hexBytes, log, isRight } from './lib/utils'
 import { Either } from 'tsmonad'
 import { publishTx } from './model/transaction'
 
@@ -29,7 +29,6 @@ export const initialSendState: SendState = {
 }
 
 export interface SendActions {
-  from: (val: string) => (s: SendState) => SendState
   to: (val: string) => (s: SendState) => SendState
   amount: (val: string) => (s: SendState) => SendState
   data: (val: string) => (s: SendState) => SendState
@@ -39,14 +38,21 @@ export interface SendActions {
 }
 
 export const rawSendActions: SendActions = {
-  from: (from) => (state) => ({ ...state, from }),
   to: (to) => (state) => ({ ...state, to }),
   amount: (amount) => (state) => ({
     ...state,
     amount: Long.fromString(amount).multiply(1e9),
   }),
   data: (data) => (state) => ({ ...state, data }),
-  privateKey: (privateKey) => (state) => ({ ...state, privateKey }),
+  privateKey: (privateKey) => (state) => {
+    try {
+      const key = semux.Key.importEncodedPrivateKey(hexBytes(privateKey))
+      const from = key ? `0x${key.toAddressHexString()}` : ''
+      return { ...state, privateKey, from }
+    } catch (err) {
+      return { ...state, privateKey, from: '' }
+    }
+  },
   submit: (rootState) => (state, actions) => {
     const key = semux.Key.importEncodedPrivateKey(hexBytes(state.privateKey))
     const tx = new semux.Transaction(
@@ -69,7 +75,7 @@ export const rawSendActions: SendActions = {
   submitResponse: (response) => (state) => {
     return {
       ...state,
-      submit: isLeft(response) ? 'NotAsked' : response,
+      submit: isRight(response) ? 'NotAsked' : response,
     }
   },
 }
@@ -81,14 +87,26 @@ export const SendView = (rootState: State, rootActions: Actions) => {
   return <div class="pa2">
     <form>
       <div class="mv3">
-        <label class="fw7 f6" for="fromInput">From</label>
+        <label class="fw7 f6" for="privateKeyInput">Private key</label>
         <input
           disabled={inProgress}
+          id="privateKeyInput"
+          type="password"
+          autocomplete="off"
+          class="db pa2 w-100 br2 b--black-20 ba f6"
+          oninput={(evt) => a.privateKey(evt.target.value)}
+        />
+      </div>
+      <div class="mv3">
+        <label class="fw7 f6" for="fromInput">From</label>
+        <input
+          disabled={true}
           type="text"
           class="db w-100 pa2 br2 b--black-20 ba f6"
           id="fromInput"
           placeholder="0x…"
-          oninput={(evt) => a.from(evt.target.value)}
+          value={s.from}
+          // oninput={(evt) => a.from(evt.target.value)}
         />
       </div>
       <div class="mv3">
@@ -122,17 +140,6 @@ export const SendView = (rootState: State, rootActions: Actions) => {
           class="db w-100 pa2 br2 b--black-20 ba f6"
           placeholder="Text"
           oninput={(evt) => a.data(evt.target.value)}
-        />
-      </div>
-      <div class="mv3">
-        <label class="fw7 f6" for="privateKeyInput">Private key</label>
-        <input
-          disabled={inProgress}
-          id="privateKeyInput"
-          type="password"
-          autocomplete="off"
-          class="db pa2 w-100 br2 b--black-20 ba f6"
-          oninput={(evt) => a.privateKey(evt.target.value)}
         />
       </div>
       <button

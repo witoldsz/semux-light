@@ -13,11 +13,15 @@ export function hexBytes(s: string): Uint8Array {
   return Buffer.from(s.replace('0x', ''), 'hex')
 }
 
-export function isLeft(e: Either<any, any>) {
+export function isRight(e: Either<any, any>) {
   return e.caseOf({
     right: () => true,
     left: () => false,
   })
+}
+
+export function isLeft(e: Either<any, any>) {
+  return !isRight(e)
 }
 
 export function mutableReverse<T>(array: T[]): T[] {

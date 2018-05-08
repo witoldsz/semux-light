@@ -15,7 +15,7 @@ import {
   TransactionsView, TxsState, initialTxsState, TxsActions,
   rawTxsActions,
 } from './transactions'
-import { DelegatesView } from './delegates'
+import { DelegatesView, DelegatesState, blankDelegates, DelegatesActions, rawDelegatesActions } from './delegates'
 import { SendView, SendState, initialSendState, SendActions, rawSendActions } from './send'
 import * as semux from 'semux'
 import { ZERO } from './lib/utils'
@@ -27,6 +27,7 @@ export interface State {
   accounts: Account[]
   send: SendState
   transactions: TxsState
+  delegates: DelegatesState
 }
 
 const initialState: State = {
@@ -36,6 +37,7 @@ const initialState: State = {
   accounts: [],
   send: initialSendState,
   transactions: initialTxsState,
+  delegates: blankDelegates,
 }
 
 export interface Actions {
@@ -44,7 +46,7 @@ export interface Actions {
   briefResponse: (response: BriefRemote) => (s: State, a: Actions) => State
   send: SendActions
   transactions: TxsActions
-
+  delegates: DelegatesActions
 }
 
 const rawActions: Actions = {
@@ -70,6 +72,7 @@ const rawActions: Actions = {
   },
   send: rawSendActions,
   transactions: rawTxsActions,
+  delegates: rawDelegatesActions,
 }
 
 const view = (s: State, a: Actions) => (
@@ -80,7 +83,7 @@ const view = (s: State, a: Actions) => (
     <Route path={Nav.Send} render={SendView} />
     <Route path={Nav.Transactions} render={TransactionsView} />
     <Route path={Nav.Delegates} render={DelegatesView} />
-    {/* <pre> {JSON.stringify(s, null, 4)}</pre> */}
+    <pre> {JSON.stringify(s, null, 4)}</pre>
   </div>
 )
 

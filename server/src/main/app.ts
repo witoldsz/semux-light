@@ -19,6 +19,8 @@ async function main() {
       proxy.web(req, res, undefined, console.error)
     }
     app.get('/v2.0.0/account/transactions', proxyMiddleware)
+    app.get('/v2.0.0/account/votes', proxyMiddleware)
+    app.get('/v2.0.0/delegates', proxyMiddleware)
     app.post('/v2.0.0/transaction/raw', proxyMiddleware)
   }
 

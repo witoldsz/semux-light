@@ -3,8 +3,10 @@ import { settings } from '../settings'
 import { Either, EitherType, either } from 'tsmonad'
 
 export const Endpoints = {
-  getAccount: exec<AccountRemote>('GET', '/account'),
-  getLatestBlock: exec<BlockRemote>('GET', '/latest-block'),
+  getAccount: exec<AccountRemote>('GET', '/v2.0.0/account'),
+  getLatestBlock: exec<BlockRemote>('GET', '/v2.0.0/latest-block'),
+  getDelegates: exec<DelegatesRemote>('GET', '/v2.0.0/delegates'),
+  getAccountVotes: exec<AccountVotesRemote>('GET', '/v2.0.0/account/votes'),
 }
 
 export interface AccountRemote {
@@ -19,6 +21,24 @@ export interface BlockRemote {
   hash: string
   number: string
   timestamp: string
+}
+
+export interface DelegatesRemote {
+  address: string,
+  name: string,
+  registeredAt: string,
+  votes: string,
+  blocksForged: string,
+  turnsHit: string,
+  turnsMissed: string,
+  validator: boolean,
+}
+
+export interface AccountVotesRemote {
+  delegate: {
+    address: string,
+  },
+  votes: string
 }
 
 function exec<T>(method: string, path: string): (query?) => Promise<Either<string, T>> {

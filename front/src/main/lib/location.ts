@@ -1,15 +1,20 @@
 import { h } from 'hyperapp'
 import { State } from '../app'
-import { addresses } from '../model/wallet'
+import { log } from './utils'
 
 export interface LocationState {
-  route: string,
-  params: { [index: string]: string },
+  route: string
+  params: {
+    addr: string
+    [index: string]: string,
+  }
 }
 
 export const initialLocationState: LocationState = {
   route: '',
-  params: {},
+  params: {
+    addr: '',
+  },
 }
 
 export interface LocationActions {
@@ -31,11 +36,11 @@ export function locationSubscribe(sub: (s: LocationState) => any) {
 }
 
 export function locationAddr1st(l: LocationState): string | undefined {
-  return (l.params.addr || '').split(',')[0]
+  return locationAddrs(l)[0]
 }
 
 export function locationAddrs(l: LocationState): string[] {
-  return (l.params.addr || '').split(',')
+  return l.params.addr.split(',')
 }
 
 type LinkProps = { to: string } & JSX.IntrinsicElements
@@ -71,15 +76,15 @@ function parseLocation(hash: string): LocationState {
           .reduce((acc, pair) => {
             const [key, val] = pair.split('=')
             return {
-              [decodeURIComponent(key)]: decodeURIComponent(val),
               ...acc,
+              [decodeURIComponent(key)]: decodeURIComponent(val),
             }
           }, {})
         : undefined
       )
       return {
         route: acc.route + (acc.route ? '/' : '') + route,
-        params: { ...params, ...acc.params },
+        params: { ...acc.params, ...params },
       }
     }, initialLocationState)
 }

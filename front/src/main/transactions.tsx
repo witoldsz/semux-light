@@ -126,15 +126,15 @@ export function TransactionsView(rootState: State, rootActions: Actions) {
     </fieldset>
 
     <div class="overflow-auto">
-      <table class="f6 w-100 mw8" cellspacing="0">
+      <table class="f6 mw8" cellspacing="0">
         <thead>
           <tr>
-            <th class="fw6 bb b--black-20 tl pb1 pr3">#</th>
-            <th class="fw6 bb b--black-20 tl pb1 pr3">Type</th>
-            <th class="fw6 bb b--black-20 tl pb1 pr3">From/To</th>
-            <th class="fw6 bb b--black-20 tl pb1 pr3">Value</th>
-            <th class="fw6 bb b--black-20 tl pb1 pr3">Time</th>
-            <th class="fw6 bb b--black-20 tl pb1 pr3">Status</th>
+            <th class="fw6 bb b--black-20 tl pb1 pl2 pr2">#</th>
+            <th class="fw6 bb b--black-20 tl pb1 pl2 pr2">Type</th>
+            <th class="fw6 bb b--black-20 tl pb1 pl2 pr2 tc">From/To</th>
+            <th class="fw6 bb b--black-20 tl pb1 pl2 pr2 tr">Value</th>
+            <th class="fw6 bb b--black-20 tl pb1 pl2 pr2">Time</th>
+            <th class="fw6 bb b--black-20 tl pb1 pl2 pr2">Status</th>
           </tr>
         </thead>
         {
@@ -154,14 +154,14 @@ function transactionRows(page: Page, rows: TransactionType[]) {
   return <tbody class="lh-copy">
     {rows.map((tx, idx) => (
       <tr class="hover-bg-washed-blue">
-        <td class="pv1 pr3 bb b--black-20">{page.to - idx}</td>
-        <td class="pv1 pr3 bb b--black-20">{tx.type}</td>
-        <td class="pv1 pr3 bb b--black-20">
+        <td class="pv1 pl2 pr2 bb bl b--black-20">{page.to - idx}</td>
+        <td class="pv1 pl2 pr2 bb bl b--black-20">{tx.type}</td>
+        <td class="pv1 pl2 pr2 bb bl b--black-20">
           {addressAbbr(tx.from)} → {addressAbbr(tx.to)}
         </td>
-        <td class="pv1 pr3 bb b--black-20">{sem(tx.value, false)}</td>
-        <td class="pv1 pr3 bb b--black-20">{tx.timestamp.toLocaleString()}</td>
-        <td class="pv1 pr3 bb b--black-20">Completed</td>
+        <td class="pv1 pl2 pr2 bb bl b--black-20 tr">{sem(tx.value, false)}</td>
+        <td class="pv1 pl2 pr2 bb bl b--black-20">{tx.timestamp.toLocaleString()}</td>
+        <td class="pv1 pl2 pr2 bb bl br b--black-20">Completed</td>
       </tr>
     ))}
   </tbody>

@@ -6,7 +6,6 @@ import {
   Route, initialLocationState, LocationActions, rawLocationActions, locationSubscribe,
 } from './lib/location'
 import { LocationState } from './lib/location'
-import { addresses } from './model/wallet'
 import { BriefRemote, Account } from './model/api'
 import BigNumber from 'bignumber.js'
 import { DateTime } from 'luxon'

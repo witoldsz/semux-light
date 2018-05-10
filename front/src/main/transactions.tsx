@@ -14,7 +14,7 @@ const LIST_SIZE = 100
 
 export interface TxsState {
   selectedAddress: string
-  pages: Page[]
+  pages: { [index: string]: Page }
 }
 
 interface Page {
@@ -35,15 +35,11 @@ function blankPage(address: string): Page {
 
 export const initialTxsState: TxsState = {
   selectedAddress: '',
-  pages: [],
+  pages: {},
 }
 
 function pageOf(state: TxsState, address: string) {
-  return state.pages.find((p) => p.address === address) || blankPage(address)
-}
-
-function replacePage(pages: Page[], page: Page): Page[] {
-  return pages.map((p) => p.address === page.address ? page : p)
+  return state.pages[address] || blankPage(address)
 }
 
 export interface TxsActions {
@@ -67,21 +63,21 @@ export const rawTxsActions: TxsActions = {
     })
     return {
       selectedAddress: address,
-      pages: replacePage(
-        state.pages,
-        {
+      pages: {
+        ...state.pages,
+        [page.address]: {
           ...page,
           transactions: isNotAsked(page.transactions) ? 'Loading' : page.transactions,
         },
-      ),
+      },
     }
   },
   fetchResult: ({ page, result }) => (state) => {
     return {
       ...state,
-      pages: [
+      pages: {
         ...state.pages,
-        {
+        [page.address]: {
           ...page,
           to: result.caseOf({
             left: () => page.to,
@@ -89,7 +85,7 @@ export const rawTxsActions: TxsActions = {
           }),
           transactions: result,
         },
-      ],
+      },
     }
   },
 }
@@ -124,8 +120,20 @@ export function TransactionsView(rootState: State, rootActions: Actions) {
         ))
       }
     </fieldset>
+    {
+      caseWebDataOf(page.transactions, {
+        notAsked: () => <span />,
+        loading: () => <span>Loading…</span>,
+        failure: (error) => <span class="dark-red">{error}</span>,
+        success: (rows) => table(page, rows),
+      })
+    }
 
-    <div class="overflow-auto">
+  </div>
+}
+
+function table(page: Page, rows: TransactionType[]) {
+  return <div class="overflow-auto">
       <table class="f6 mw8" cellspacing="0">
         <thead>
           <tr>
@@ -137,21 +145,7 @@ export function TransactionsView(rootState: State, rootActions: Actions) {
             <th class="fw6 bb b--black-20 tl pb1 pl2 pr2">Status</th>
           </tr>
         </thead>
-        {
-          caseWebDataOf(page.transactions, {
-            notAsked: () => <span />,
-            loading: () => <span>Loading…</span>,
-            failure: (err) => <pre>{err}</pre>,
-            success: (rows) => transactionRows(page, rows),
-          })
-        }
-      </table>
-    </div>
-  </div>
-}
-
-function transactionRows(page: Page, rows: TransactionType[]) {
-  return <tbody class="lh-copy">
+      <tbody class="lh-copy">
     {rows.map((tx, idx) => (
       <tr class="hover-bg-washed-blue">
         <td class="pv1 pl2 pr2 bb bl b--black-20">{page.to - idx}</td>
@@ -165,4 +159,6 @@ function transactionRows(page: Page, rows: TransactionType[]) {
       </tr>
     ))}
   </tbody>
+    </table>
+  </div>
 }

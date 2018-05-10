@@ -1,12 +1,11 @@
 import * as Long from 'long'
 import { h, app } from 'hyperapp'
 import { NavView, Nav } from './nav'
-import { HomeView } from './home'
+import { HomeView, HomeState, initialHomeState, HomeActions, rawHomeActions } from './home'
 import {
   Route, initialLocationState, LocationActions, rawLocationActions, locationSubscribe,
 } from './lib/location'
 import { LocationState } from './lib/location'
-import { BriefRemote, Account } from './model/api'
 import BigNumber from 'bignumber.js'
 import { DateTime } from 'luxon'
 import { Maybe, maybe } from 'tsmonad'
@@ -24,6 +23,7 @@ export interface State {
   blockNumber: BigNumber
   blockTime: Maybe<DateTime>
   accounts: Account[]
+  home: HomeState
   send: SendState
   transactions: TxsState
   delegates: DelegatesState
@@ -34,6 +34,7 @@ const initialState: State = {
   blockNumber: ZERO,
   blockTime: Maybe.nothing(),
   accounts: [],
+  home: initialHomeState,
   send: initialSendState,
   transactions: initialTxsState,
   delegates: blankDelegates,
@@ -42,7 +43,7 @@ const initialState: State = {
 export interface Actions {
   location: LocationActions
   briefFetch: () => (s: State, a: Actions) => void
-  briefResponse: (response: BriefRemote) => (s: State, a: Actions) => State
+  home: HomeActions
   send: SendActions
   transactions: TxsActions
   delegates: DelegatesActions
@@ -51,24 +52,9 @@ export interface Actions {
 const rawActions: Actions = {
   location: rawLocationActions,
   briefFetch: () => (state, actions) => {
-    fetch(`/brief?addresses=${state.location.params.addr}`, { method: 'GET' })
-      .then((r) => r.json())
-      .then(actions.briefResponse)
+    actions.home.fetch(state.location)
   },
-  briefResponse: (r: BriefRemote) => (state, actions) => {
-    return {
-      ...state,
-      blockNumber: new BigNumber(r.blockNumber),
-      blockTime: maybe(DateTime.fromMillis(parseInt(r.blockTime, 10))),
-      accounts: r.accounts.map((ra) => ({
-        address: ra.address,
-        available: new BigNumber(ra.available).div(1e9),
-        locked: new BigNumber(ra.locked).div(1e9),
-        nonce: Long.fromString(ra.nonce),
-        transactionCount: ra.transactionCount,
-      })),
-    }
-  },
+  home: rawHomeActions,
   send: rawSendActions,
   transactions: rawTxsActions,
   delegates: rawDelegatesActions,

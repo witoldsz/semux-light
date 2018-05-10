@@ -1,5 +1,6 @@
 import { h } from 'hyperapp'
-import { DelegateType, DelegatesResponse, fetchDelegates, fetchVotes, VotesResponse } from './model/delegate'
+import { DelegateType, DelegatesResponse, fetchDelegates } from './model/delegate'
+import { fetchVotes, VotesResponse } from './model/vote'
 import { State, Actions } from './app'
 import { addressAbbr, sem } from './model/wallet'
 import BigNumber from 'bignumber.js'

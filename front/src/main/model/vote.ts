@@ -9,18 +9,16 @@ export interface AccountVoteTypeRemote {
   votes: string,
 }
 
-export interface AccountVote {
+export interface AccountVoteType {
   delegate: string
   votes: BigNumber
 }
 
-export type VotesResponse = Either<string, AccountVote[]>
-
-export async function fetchVotes(address: string): Promise<VotesResponse> {
+export async function fetchVotes(address: string): Promise<AccountVoteType[]> {
   const path = `/v2.0.0/account/votes?address=${address}`
-  const remotesE = await exec<AccountVoteTypeRemote[]>('GET', path)
-  return remotesE.fmap((remotes) => remotes.map((r) => ({
+  const remotes = await exec<AccountVoteTypeRemote[]>('GET', path)
+  return remotes.map((r) => ({
     delegate: r.delegate.address,
     votes: new BigNumber(r.votes).div(1e9),
-  })))
+  }))
 }

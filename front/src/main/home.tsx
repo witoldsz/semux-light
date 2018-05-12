@@ -4,62 +4,62 @@ import { addressAbbr, sem } from './model/wallet'
 import BigNumber from 'bignumber.js'
 import { ZERO, firstEitherError, catEithers } from './lib/utils'
 import { DateTime } from 'luxon'
-import { BlockType, fetchLatestBlock, BlockTypeResponse } from './model/block'
-import { AccountType, AccountTypeResponse, fetchAccount } from './model/account'
+import { BlockType, fetchLatestBlock } from './model/block'
+import { AccountType, fetchAccount } from './model/account'
 import { Maybe } from 'tsmonad'
 import { WebData } from './lib/webdata'
 import { locationAddrs, LocationState } from './lib/location'
 
 export interface HomeState {
-  error: string,
+  errorMessage: string,
   block: Maybe<BlockType>
   accounts: AccountType[]
 }
 
 export const initialHomeState: HomeState = {
-  error: '',
+  errorMessage: '',
   block: Maybe.nothing(),
   accounts: [],
 }
 
 export interface HomeActions {
   fetch: (ls: LocationState) => (s: HomeState, a: HomeActions) => HomeState
-  fetchBlockResponse: (b: BlockTypeResponse) => (s: HomeState) => HomeState
-  fetchAccountsResponse: (a: AccountTypeResponse[]) => (s: HomeState) => HomeState
+  fetchBlockResponse: (b: BlockType) => (s: HomeState) => HomeState
+  fetchAccountsResponse: (a: AccountType[]) => (s: HomeState) => HomeState
+  fetchError: (error) => (s: HomeState) => HomeState
 }
 
 export const rawHomeActions: HomeActions = {
   fetch: (locationState) => (state, actions) => {
-    fetchLatestBlock().then(actions.fetchBlockResponse)
+    fetchLatestBlock()
+      .then(actions.fetchBlockResponse)
+      .catch(actions.fetchError)
 
     Promise
       .all(locationAddrs(locationState).map(fetchAccount))
       .then(actions.fetchAccountsResponse)
 
-    return { ...state, error: '' }
+    return { ...state, errorMessage: '' }
   },
-  fetchBlockResponse: (blockE) => (state) => {
-    return { ...state, ...blockE.caseOf({
-      left: (error) => ({ block: Maybe.nothing<BlockType>(), error }),
-      right: (block) => ({ block: Maybe.just(block), error: state.error }),
-    })}
-  },
-  fetchAccountsResponse: (accountsEs) => (state) => {
-    const accounts = catEithers(accountsEs)
+  fetchBlockResponse: (block) => (state) => ({
+    ...state,
+    block: Maybe.just(block),
+  }),
+  fetchAccountsResponse: (accounts) => (state) => {
     // TODO: fetch 5 last txs from accounts, merge, sort, trim
-    return {
-      ...state,
-      error: firstEitherError(accountsEs).valueOr(''),
-      accounts,
-    }
+    return { ...state, accounts }
   },
+  fetchError: (error) => (state) => ({
+    ...state,
+    errorMessage: error.message,
+  }),
 }
 
 export function HomeView(rootState: State) {
   const state = rootState.home
   return <div class="pa2">
-    {state.error
-      ? <div class="dark-red">{state.error}</div>
+    {state.errorMessage
+      ? <div class="dark-red">{state.errorMessage}</div>
       : ''
     }
     <div class="flex">

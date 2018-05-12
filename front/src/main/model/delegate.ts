@@ -24,12 +24,10 @@ export interface DelegateType {
   validator: boolean
 }
 
-export type DelegatesResponse = Either<string, DelegateType[]>
-
-export async function fetchDelegates(): Promise<DelegatesResponse> {
+export async function fetchDelegates(): Promise<DelegateType[]> {
   const path = '/v2.0.0/delegates'
-  const remoteE = await exec<DelegateTypeRemote[]>('GET', path)
-  return remoteE.fmap((remotes) => remotes.map((r) => {
+  const remotes = await exec<DelegateTypeRemote[]>('GET', path)
+  return remotes.map((r) => {
     const turnsHit = parseInt(r.turnsHit, 10)
     const turnsMissed = parseInt(r.turnsMissed, 10)
     const total = turnsHit + turnsMissed
@@ -43,5 +41,5 @@ export async function fetchDelegates(): Promise<DelegatesResponse> {
       rate: total === 0 ? 0 : (turnsHit * 100 / total),
       validator: r.validator,
     }
-  }))
+  })
 }

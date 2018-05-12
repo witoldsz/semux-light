@@ -1,25 +1,5 @@
-import * as Long from 'long'
-import BigNumber from 'bignumber.js'
-import { SemuxApi } from 'semux/dist/types/lib/api'
-import { TransactionType, TransactionTypeRemote, TransactionTypeRes } from './transaction'
-import { Either, either } from 'tsmonad'
-
-export interface ApiResponse<T> {
-  success: boolean
-  message: string
-  result?: T
-}
-
-export function exec<T>(method: string, path: string): Promise<Either<string, T>> {
-  return fetch(path, { method })
-    .then((response) => response.json())
-    .then((json) => wrapResponseBody<T>(json))
-    .catch((e) => Either.left(e.message))
-}
-
-function wrapResponseBody<T>({ success, message, result }: ApiResponse<T>): Either<string, T> {
-  return either(
-    (success ? undefined : message),
-    (success ? (result || ({} as any)) : undefined),
-  )
+export async function exec<T>(method: string, path: string): Promise<T> {
+  const r = await fetch(path, { method })
+  const { success, message, result } = await r.json()
+  return success ? result : Promise.reject(new Error(message))
 }

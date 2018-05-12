@@ -12,14 +12,12 @@ export interface BlockType {
   timestamp: Date
 }
 
-export type BlockTypeResponse = Either<string, BlockType>
-
-export async function fetchLatestBlock(): Promise<BlockTypeResponse> {
+export async function fetchLatestBlock(): Promise<BlockType> {
   const path = '/v2.0.0/latest-block'
-  const remoteE = await exec<BlockTypeRemote>('GET', path)
-  return remoteE.fmap((r) => ({
-    hash: r.hash,
-    number: parseInt(r.number, 10),
-    timestamp: new Date(parseInt(r.timestamp, 10)),
-  }))
+  const remote = await exec<BlockTypeRemote>('GET', path)
+  return {
+    hash: remote.hash,
+    number: parseInt(remote.number, 10),
+    timestamp: new Date(parseInt(remote.timestamp, 10)),
+  }
 }

@@ -1,13 +1,13 @@
 import { h } from 'hyperapp'
-import { WebData, isNotAsked, caseWebDataOf } from './lib/webdata'
-import { State, Actions } from './app'
-import { locationAddr1st, LocationState, locationAddrs } from './lib/location'
-import { TransactionType } from './model/transaction'
+import { WebData, isNotAsked, caseWebDataOf } from '../lib/webdata'
+import { State, Actions } from '../app'
+import { locationAddr1st, LocationState, locationAddrs } from '../lib/location'
+import { TransactionType } from '../model/transaction'
 import { Either } from 'tsmonad'
-import { fetchTxs } from './model/transaction'
-import { log } from './lib/utils'
-import { addressAbbr, sem } from './model/wallet'
-import { Nav } from './nav'
+import { fetchTxs } from '../model/transaction'
+import { log } from '../lib/utils'
+import { addressAbbr, sem } from '../model/wallet'
+import { Nav } from '../nav'
 
 const LIST_SIZE = 100
 
@@ -100,33 +100,26 @@ export const rawTxsActions: TxsActions = {
 export function TransactionsView(rootState: State, rootActions: Actions) {
   const state = rootState.transactions
   const actions = rootActions.transactions
-  const address = state.selectedAddress
-  const page = pageOf(state, address)
+  const page = pageOf(state, state.selectedAddress)
   return <div class="pa2">
-    <fieldset class="bn">
-      <legend class="fw7">Account:</legend>
-      {
-        locationAddrs(rootState.location).map((addr) => (
-          <div class="flex items-center">
-            <input
-              name="addresses"
-              class="mr2"
-              type="radio"
-              id={`addr_${addr}`}
-              value="acc2"
-              checked={addr === address}
-              onclick={(() => {
-                actions.fetch({
-                  locationState: rootState.location,
-                  newAddress: addr,
-                })
-              })}
-            />
-            <label for={`addr_${addr}`} class="lh-copy">{addr}</label>
-          </div>
-        ))
-      }
-    </fieldset>
+    <div class="mv3 dib">
+      <label class="fw7 f6" for="exampleInputName1">Address:</label>{' '}
+      <select
+        class="f6 h2 bg-white ma1 b--black-20"
+        onchange={(e) => actions.fetch({
+          locationState: rootState.location,
+          newAddress: e.target.value,
+        })}
+      >
+        {
+          locationAddrs(rootState.location).map((myAddress) => (
+            <option selected={state.selectedAddress === myAddress} value={myAddress}>
+              {myAddress}
+            </option>
+          ))
+        }
+      </select>
+    </div>
     {
       caseWebDataOf(page.transactions, {
         notAsked: () => <span />,

@@ -1,14 +1,13 @@
 import { h } from 'hyperapp'
-import { State } from './app'
-import { addressAbbr, sem } from './model/wallet'
+import { State } from '../app'
+import { addressAbbr, sem } from '../model/wallet'
 import BigNumber from 'bignumber.js'
-import { ZERO, firstEitherError, catEithers } from './lib/utils'
+import { ZERO, firstEitherError, catEithers } from '../lib/utils'
 import { DateTime } from 'luxon'
-import { BlockType, fetchLatestBlock } from './model/block'
-import { AccountType, fetchAccount } from './model/account'
+import { BlockType, fetchLatestBlock } from '../model/block'
+import { AccountType, fetchAccount } from '../model/account'
 import { Maybe } from 'tsmonad'
-import { WebData } from './lib/webdata'
-import { locationAddrs, LocationState } from './lib/location'
+import { locationAddrs, LocationState } from '../lib/location'
 
 export interface HomeState {
   errorMessage: string,

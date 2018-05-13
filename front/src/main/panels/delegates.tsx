@@ -1,21 +1,27 @@
 import { h } from 'hyperapp'
-import { DelegateType, fetchDelegates } from './model/delegate'
-import { fetchVotes, AccountVoteType } from './model/vote'
-import { State, Actions } from './app'
-import { addressAbbr, sem } from './model/wallet'
+import { DelegateType, fetchDelegates } from '../model/delegate'
+import { fetchVotes, AccountVoteType } from '../model/vote'
+import { State, Actions } from '../app'
+import { addressAbbr, sem } from '../model/wallet'
 import BigNumber from 'bignumber.js'
-import { locationAddrs } from './lib/location'
-import { ZERO } from './lib/utils'
+import { locationAddrs, locationAddr1st } from '../lib/location'
+import { ZERO } from '../lib/utils'
 import { Either } from 'tsmonad'
 
+type MyAddress = string
+type DelegateAddress = string
+type Votes = Map<MyAddress, Map<DelegateAddress, BigNumber>>
+
 export interface DelegatesState {
+  myAddress: MyAddress
   errorMessage: string
-  names: Map<string, string>
-  votes: Map<string, BigNumber>
+  names: Map<DelegateAddress, string>
+  votes: Votes
   list: DelegateType[]
 }
 
 export const blankDelegates: DelegatesState = {
+  myAddress: '',
   errorMessage: '',
   names: new Map(),
   votes: new Map(),
@@ -23,24 +29,27 @@ export const blankDelegates: DelegatesState = {
 }
 
 export interface DelegatesActions {
+  myAddress: (a: string) => (state: DelegatesState) => DelegatesState
   fetch: (rs: State) => (state: DelegatesState, actions: DelegatesActions) => DelegatesState
   fetchResultDelegates: (r: DelegateType[]) => (state: DelegatesState) => DelegatesState
-  fetchResultVotes: (r: AccountVoteType[]) => (state: DelegatesState) => DelegatesState
+  fetchResultVotes: (a: { myAddress: MyAddress, list: AccountVoteType[] }) => (state: DelegatesState) => DelegatesState
   fetchError: (error) => (state: DelegatesState) => DelegatesState
 }
 
 export const rawDelegatesActions: DelegatesActions = {
+  myAddress: (myAddress) => (state) =>  ({ ...state, myAddress }),
   fetch: (rootState) => (state, actions) => {
     fetchDelegates()
       .then(actions.fetchResultDelegates)
       .catch(actions.fetchError)
 
-    locationAddrs(rootState.location).forEach((address) => {
-      fetchVotes(address)
-        .then(actions.fetchResultVotes)
+    locationAddrs(rootState.location).forEach((myAddress) => {
+      fetchVotes(myAddress)
+        .then((list) => actions.fetchResultVotes({ myAddress, list }))
         .catch(actions.fetchError)
     })
-    return { ...state, errorMessage: '' }
+    const myAddress = state.myAddress || locationAddr1st(rootState.location) || ''
+    return { ...state, myAddress, errorMessage: '' }
   },
   fetchResultDelegates: (list) => (state) => ({
     ...state,
@@ -48,9 +57,12 @@ export const rawDelegatesActions: DelegatesActions = {
     list,
   })
   ,
-  fetchResultVotes: (list) => (state) => ({
+  fetchResultVotes: ({ myAddress, list }) => (state) => ({
     ...state,
-    votes: list.reduce((votes, v) => votes.set(v.delegate, v.votes), new Map<string, BigNumber>()),
+    votes: state.votes.set(myAddress, list.reduce(
+      (accVotes, v) => accVotes.set(v.delegate, v.votes),
+      new Map<DelegateAddress, BigNumber>(),
+    )),
   }),
   fetchError: (error) => (state) => ({
     ...state,
@@ -62,6 +74,21 @@ export function DelegatesView(rootState: State, rootActions: Actions) {
   const state = rootState.delegates
   const actions = rootActions.delegates
   return <div class="pa2" oncreate={() => actions.fetch(rootState)}>
+    <div class="mv3 dib">
+      <label class="fw7 f6" for="exampleInputName1">Address:</label>{' '}
+      <select
+        class="f6 h2 bg-white ma1 b--black-20"
+        onchange={(e) => actions.myAddress(e.target.value)}
+      >
+        {
+          locationAddrs(rootState.location).map((myAddress) => (
+            <option selected={state.myAddress === myAddress} value={myAddress}>
+              {myAddress}
+            </option>
+          ))
+        }
+      </select>
+    </div>
     {state.errorMessage
       ? <span class="dark-red">{state.errorMessage}</span>
       : table(state)
@@ -92,7 +119,7 @@ function table(state: DelegatesState) {
               <td class="pv1 pr2 pl2 bb bl b--black-20">{addressAbbr(d.address)}</td>
               <td class="pv1 pr2 pl2 bb bl b--black-20 tr">{sem(d.votes, false)}</td>
               <td class="pv1 pr2 pl2 bb bl b--black-20 tr">
-                {sem(state.votes.get(d.address) || ZERO, false)}
+                {sem(myVotesForDelegate(state, d.address), false)}
               </td>
               <td class="pv1 pr2 pl2 bb bl b--black-20">
                 {d.validator ? 'Validator' : 'Delegate'}
@@ -104,4 +131,10 @@ function table(state: DelegatesState) {
       </tbody>
     </table>
   </div>
+}
+
+function myVotesForDelegate(state: DelegatesState, delegate: DelegateAddress) {
+  const myVotesMap = state.votes.get(state.myAddress)
+  const myVotes = myVotesMap && myVotesMap.get(delegate)
+  return myVotes ? myVotes : ZERO
 }

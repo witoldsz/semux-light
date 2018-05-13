@@ -1,7 +1,7 @@
 import * as Long from 'long'
 import { h, app } from 'hyperapp'
 import { NavView, Nav } from './nav'
-import { HomeView, HomeState, initialHomeState, HomeActions, rawHomeActions } from './home'
+import { HomeView, HomeState, initialHomeState, HomeActions, rawHomeActions } from './panels/home'
 import {
   Route, initialLocationState, LocationActions, rawLocationActions, locationSubscribe,
 } from './lib/location'
@@ -12,9 +12,11 @@ import { Maybe, maybe } from 'tsmonad'
 import {
   TransactionsView, TxsState, initialTxsState, TxsActions,
   rawTxsActions,
-} from './transactions'
-import { DelegatesView, DelegatesState, blankDelegates, DelegatesActions, rawDelegatesActions } from './delegates'
-import { SendView, SendState, initialSendState, SendActions, rawSendActions } from './send'
+} from './panels/transactions'
+import {
+  DelegatesView, DelegatesState, blankDelegates, DelegatesActions, rawDelegatesActions,
+} from './panels/delegates'
+import { SendView, SendState, initialSendState, SendActions, rawSendActions } from './panels/send'
 import * as semux from 'semux'
 import { ZERO } from './lib/utils'
 
@@ -61,13 +63,15 @@ const rawActions: Actions = {
 }
 
 const view = (s: State, a: Actions) => (
-  <div class="w-100 sans-serif">
+  <div class="sans-serif">
     <h1 class="pa2">Semux Light</h1>
     <NavView />
     <Route path={Nav.Home} render={HomeView} />
     <Route path={Nav.Send} render={SendView} />
     <Route path={Nav.Transactions} render={TransactionsView} />
     <Route path={Nav.Delegates} render={DelegatesView} />
+    <hr/>
+    <p>debug:</p>
     <pre> {JSON.stringify(s, null, 4)}</pre>
   </div>
 )

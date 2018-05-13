@@ -1,14 +1,14 @@
 import { h } from 'hyperapp'
 import { Buffer } from 'buffer'
 import BigNumber from 'bignumber.js'
-import { State, Actions } from './app'
-import { WebData, isLoading, isError, errorOf } from './lib/webdata'
+import { State, Actions } from '../app'
+import { WebData, isLoading, isError, errorOf } from '../lib/webdata'
 import semux from 'semux'
 import * as Long from 'long'
-import { hexBytes, log, isRight } from './lib/utils'
+import { hexBytes, log, isRight } from '../lib/utils'
 import { Either } from 'tsmonad'
-import { publishTx } from './model/transaction'
-import { fetchAccount, AccountType } from './model/account'
+import { publishTx } from '../model/transaction'
+import { fetchAccount, AccountType } from '../model/account'
 
 export interface SendState {
   from: string

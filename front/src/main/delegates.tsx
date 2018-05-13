@@ -1,20 +1,22 @@
 import { h } from 'hyperapp'
-import { DelegateType, DelegatesResponse, fetchDelegates, fetchVotes, VotesResponse } from './model/delegate'
+import { DelegateType, fetchDelegates } from './model/delegate'
+import { fetchVotes, AccountVoteType } from './model/vote'
 import { State, Actions } from './app'
 import { addressAbbr, sem } from './model/wallet'
 import BigNumber from 'bignumber.js'
 import { locationAddrs } from './lib/location'
 import { ZERO } from './lib/utils'
+import { Either } from 'tsmonad'
 
 export interface DelegatesState {
-  error: string
+  errorMessage: string
   names: Map<string, string>
   votes: Map<string, BigNumber>
   list: DelegateType[]
 }
 
 export const blankDelegates: DelegatesState = {
-  error: '',
+  errorMessage: '',
   names: new Map(),
   votes: new Map(),
   list: [],
@@ -22,45 +24,46 @@ export const blankDelegates: DelegatesState = {
 
 export interface DelegatesActions {
   fetch: (rs: State) => (state: DelegatesState, actions: DelegatesActions) => DelegatesState
-  fetchResultDelegates: (r: DelegatesResponse) => (state: DelegatesState) => DelegatesState
-  fetchResultVotes: (r: VotesResponse) => (state: DelegatesState) => DelegatesState
+  fetchResultDelegates: (r: DelegateType[]) => (state: DelegatesState) => DelegatesState
+  fetchResultVotes: (r: AccountVoteType[]) => (state: DelegatesState) => DelegatesState
+  fetchError: (error) => (state: DelegatesState) => DelegatesState
 }
 
 export const rawDelegatesActions: DelegatesActions = {
   fetch: (rootState) => (state, actions) => {
-    fetchDelegates().then(actions.fetchResultDelegates)
+    fetchDelegates()
+      .then(actions.fetchResultDelegates)
+      .catch(actions.fetchError)
+
     locationAddrs(rootState.location).forEach((address) => {
-      fetchVotes(address).then(actions.fetchResultVotes)
+      fetchVotes(address)
+        .then(actions.fetchResultVotes)
+        .catch(actions.fetchError)
     })
-    return { ...state, error: '' }
+    return { ...state, errorMessage: '' }
   },
-  fetchResultDelegates: (listE) => (state) => {
-    return listE.caseOf({
-      left: (error) => ({ ...state, error }),
-      right: (list) => ({
-        ...state,
-        names: list.reduce((names, d) => names.set(d.address, d.name), new Map<string, string>()),
-        list,
-      }),
-    })
-  },
-  fetchResultVotes: (votesE) => (state: DelegatesState) => {
-    return votesE.caseOf({
-      left: (error) => ({ ...state, error }),
-      right: (list) => ({
-        ...state,
-        votes: list.reduce((votes, v) => votes.set(v.delegate, v.votes), state.votes),
-      }),
-    })
-  },
+  fetchResultDelegates: (list) => (state) => ({
+    ...state,
+    names: list.reduce((names, d) => names.set(d.address, d.name), new Map<string, string>()),
+    list,
+  })
+  ,
+  fetchResultVotes: (list) => (state) => ({
+    ...state,
+    votes: list.reduce((votes, v) => votes.set(v.delegate, v.votes), new Map<string, BigNumber>()),
+  }),
+  fetchError: (error) => (state) => ({
+    ...state,
+    errorMessage: error.message,
+  }),
 }
 
 export function DelegatesView(rootState: State, rootActions: Actions) {
   const state = rootState.delegates
   const actions = rootActions.delegates
   return <div class="pa2" oncreate={() => actions.fetch(rootState)}>
-    {state.error
-      ? <span class="dark-red">{state.error}</span>
+    {state.errorMessage
+      ? <span class="dark-red">{state.errorMessage}</span>
       : table(state)
     }
   </div>

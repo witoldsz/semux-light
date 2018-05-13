@@ -1,10 +1,9 @@
 import { h } from 'hyperapp'
 import { WebData, isNotAsked, caseWebDataOf } from './lib/webdata'
-import Transaction from 'semux/dist/types/lib/Transaction'
 import { State, Actions } from './app'
 import { locationAddr1st, LocationState, locationAddrs } from './lib/location'
-import { TransactionType, TransactionTypeRes } from './model/transaction'
-import { Either } from 'tsmonad/lib/src'
+import { TransactionType } from './model/transaction'
+import { Either } from 'tsmonad'
 import { fetchTxs } from './model/transaction'
 import { log } from './lib/utils'
 import { addressAbbr, sem } from './model/wallet'
@@ -45,7 +44,8 @@ function pageOf(state: TxsState, address: string) {
 export interface TxsActions {
   fetch: (a: { locationState: LocationState, newAddress?: string })
     => (state: TxsState, actions: TxsActions) => TxsState
-  fetchResult: ({ page, result }: { page: Page, result: TransactionTypeRes }) => (state: TxsState) => TxsState
+  fetchResult: (a: { page: Page, result: Either<string, TransactionType[]> })
+    => (state: TxsState) => TxsState
 }
 
 export const rawTxsActions: TxsActions = {
@@ -58,9 +58,16 @@ export const rawTxsActions: TxsActions = {
       return state
     }
     const page = pageOf(state, address)
-    fetchTxs(address, page.from, page.to).then((result) => {
-      actions.fetchResult({ page, result })
-    })
+    fetchTxs(address, page.from, page.to)
+      .then((result) => actions.fetchResult({
+        page,
+        result: Either.right(result),
+      }))
+      .catch((error) => actions.fetchResult({
+        page,
+        result: Either.left(error.message),
+      }))
+
     return {
       selectedAddress: address,
       pages: {

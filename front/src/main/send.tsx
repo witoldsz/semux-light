@@ -5,10 +5,10 @@ import { State, Actions } from './app'
 import { WebData, isLoading, isError, errorOf } from './lib/webdata'
 import semux from 'semux'
 import * as Long from 'long'
-import { nonce } from './model/wallet'
 import { hexBytes, log, isRight } from './lib/utils'
 import { Either } from 'tsmonad'
 import { publishTx } from './model/transaction'
+import { fetchAccount, AccountType } from './model/account'
 
 export interface SendState {
   from: string
@@ -34,7 +34,7 @@ export interface SendActions {
   data: (val: string) => (s: SendState) => SendState
   privateKey: (val: string) => (s: SendState) => SendState
   submit: (s: State) => (s: SendState, a: SendActions) => SendState
-  submitResponse: (r: Either<string, any>) => (s: SendState) => SendState
+  submitResponse: (r: WebData<undefined>) => (s: SendState) => SendState
 }
 
 export const rawSendActions: SendActions = {
@@ -55,28 +55,27 @@ export const rawSendActions: SendActions = {
   },
   submit: (rootState) => (state, actions) => {
     const key = semux.Key.importEncodedPrivateKey(hexBytes(state.privateKey))
-    const tx = new semux.Transaction(
-      semux.Network.TESTNET,
-      semux.TransactionType.TRANSFER,
-      hexBytes(state.to),
-      state.amount,
-      Long.fromString('5000000'),
-      nonce(rootState, state.from),
-      Long.fromNumber(new Date().getTime()),
-      Buffer.from(state.data, 'utf-8'),
-    ).sign(key)
+    fetchAccount(state.from)
+      .then((account) => publishTx(new semux.Transaction(
+          semux.Network.TESTNET,
+          semux.TransactionType.TRANSFER,
+          hexBytes(state.to),
+          state.amount,
+          Long.fromString('5000000'),
+          Long.fromNumber(account.nonce - 1),
+          Long.fromNumber(Date.now()),
+          Buffer.from(state.data, 'utf-8'),
+        ).sign(key)))
+      .then(() => actions.submitResponse('NotAsked'))
+      .catch((e) => actions.submitResponse(Either.left(e.message)))
 
-    publishTx(tx).then(actions.submitResponse)
     return {
       ...state,
       submit: 'Loading',
     }
   },
   submitResponse: (response) => (state) => {
-    return {
-      ...state,
-      submit: isRight(response) ? 'NotAsked' : response,
-    }
+    return { ...state, submit: response }
   },
 }
 

@@ -4,14 +4,17 @@ import { Maybe, maybe } from 'tsmonad'
 import { State } from '../app'
 
 export function addressAbbr(s: string): string {
-  return `${s.substr(0, 6)}…${s.substr(s.length - 4, 4)}`
+  return s ? `${s.substr(0, 6)}…${s.substr(s.length - 4, 4)}` : ''
+}
+
+export function transfer(a1: string, a2: string) {
+  return `${addressAbbr(a1)} → ${addressAbbr(a2)}`
 }
 
 export function sem(amount: BigNumber, showLabel = true): string {
   return amount.toFormat() + (showLabel ? ' SEM' : '')
 }
 
-// export function nonce(s: State, address: string) {
-//   const acc = s.accounts.find(({ address: a }) => address === a)
-//   return acc ? acc.nonce : Long.ZERO
-// }
+export function localeDateTime(d: Date) {
+  return `${d.toLocaleDateString()} ${d.toLocaleTimeString()}`
+}

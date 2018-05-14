@@ -6,8 +6,8 @@ import { TransactionType } from '../model/transaction'
 import { Either } from 'tsmonad'
 import { fetchTxs } from '../model/transaction'
 import { log } from '../lib/utils'
-import { addressAbbr, sem } from '../model/wallet'
 import { Nav } from '../nav'
+import { transfer, sem } from '../lib/format'
 
 const LIST_SIZE = 100
 
@@ -151,7 +151,7 @@ function table(page: Page, rows: TransactionType[]) {
         <td class="pv1 pl2 pr2 bb bl b--black-20">{page.to - idx}</td>
         <td class="pv1 pl2 pr2 bb bl b--black-20">{tx.type}</td>
         <td class="pv1 pl2 pr2 bb bl b--black-20">
-          {addressAbbr(tx.from)} → {addressAbbr(tx.to)}
+          {transfer(tx.from, tx.to)}
         </td>
         <td class="pv1 pl2 pr2 bb bl b--black-20 tr">{sem(tx.value, false)}</td>
         <td class="pv1 pl2 pr2 bb bl b--black-20">{tx.timestamp.toLocaleString()}</td>

@@ -88,71 +88,79 @@ export function HomeView(rootState: State) {
     <div class="flex">
       <div class="mw5 mw6-ns hidden ba">
         <h1 class="f5 bg-near-black white mv0 pv2 ph3">Overview</h1>
-        <div class="pa3">
-          <dl class="f6 lh-title mv2">
-            <dt class="dib b">Block #:</dt>{' '}
-            <dd class="dib ml0">
+        <table class="pa3 f6">
+          <tr>
+            <td class="b lh-title pv1">Block #:</td>
+            <td>
               {state.block.map((b) => b.number.toLocaleString()).valueOr('')}
-            </dd>
-          </dl>
-          <dl class="f6 lh-title mv2">
-            <dt class="dib b">Block time:</dt>{' '}
-            <dd class="dib ml0">{
+            </td>
+          </tr>
+          <tr>
+            <td class="b lh-title pv1">Block time:</td>{' '}
+            <td>{
               state.block.map(({ timestamp: d }) => localeDateTime(d)).valueOr('')
               }
-            </dd>
-          </dl>
-          <dl class="f6 lh-title mv2">
-            <dt class="dib b">Coinbase:</dt>{' '}
-            <dd class="dib ml0">
+            </td>
+          </tr>
+          <tr>
+            <td class="b lh-title pv1">Coinbase:</td>{' '}
+            <td>
               {addressAbbr(locationAddr1st(rootState.location) || '')}
-            </dd>
-          </dl>
-          <dl class="f6 lh-title mv2">
-            <dt class="dib b">Available:</dt>{' '}
-            <dd class="dib ml0">{sem(state.accounts
-              .map((a) => a.available)
-              .reduce((sum, a) => sum.plus(a), ZERO),
+            </td>
+          </tr>
+          <tr>
+            <td class="b lh-title pv1">Available:</td>{' '}
+            <td>
+              {sem(state.accounts
+                .map((a) => a.available)
+                .reduce((sum, a) => sum.plus(a), ZERO),
               )}
-            </dd>
-          </dl>
-          <dl class="f6 lh-title mv2">
-            <dt class="dib b">Locked:</dt>{' '}
-            <dd class="dib ml0">{sem(state.accounts
-              .map((a) => a.locked)
-              .reduce((sum, a) => sum.plus(a), ZERO),
-              )}</dd>
-          </dl>
-          <dl class="f6 lh-title mv2">
-            <dt class="dib b">Total Balance:</dt>{' '}
-            <dd class="dib ml0">{sem(state.accounts
-              .map((a) => a.available.plus(a.locked))
-              .reduce((sum, a) => sum.plus(a), ZERO),
-              )}</dd>
-          </dl>
-        </div>
+            </td>
+          </tr>
+          <tr>
+            <td class="b lh-title pv1">Locked:</td>{' '}
+            <td>
+              {sem(state.accounts
+                .map((a) => a.locked)
+                .reduce((sum, a) => sum.plus(a), ZERO),
+              )}
+            </td>
+          </tr>
+          <tr>
+            <td class="b lh-title pv1">Total Balance:</td>{' '}
+            <td>
+              {sem(state.accounts
+                .map((a) => a.available.plus(a.locked))
+                .reduce((sum, a) => sum.plus(a), ZERO),
+              )}
+            </td>
+          </tr>
+        </table>
       </div>
 
       <div class="ml3 mw5 mw6-ns hidden ba">
         <h1 class="f5 bg-near-black white mv0 pv2 ph3">Transactions</h1>
-        <div class="pa3">
-
+        <table class="pa3">
           {state.transactions.map((tx) => {
             const [mathSign, img] = mathSignAndImg(state, tx)
-            return <div class="flex">
-              <img src={`resources/${img}`} class="w2 h2 mt2 mr2" />
-              <dl class="f6 lh-title mv2">
-                <dt class="f6 b">{localeDateTime(tx.timestamp)}</dt>
-                <dd class="ml0">{transfer(tx.from, tx.to)}</dd>
-              </dl>
-              <dl class="ml3 f6 lh-title mv2">
-                <dt class="f6 b">{mathSign}{sem(tx.value)}</dt>
-              </dl>
-            </div>
+            return <tr>
+              <td><img src={`resources/${img}`} class="w2 h2 mt2 mr2" /></td>
+              <td class="f6">
+                <span class="b lh-title">{localeDateTime(tx.timestamp)}</span>
+                <br/>
+                {transfer(tx.from, tx.to)}
+              </td>
+              <td>
+                <dl class="ml3 f6 lh-title mv2">
+                  <dt class="f6 b">{mathSign}{sem(tx.value)}</dt>
+                </dl>
+              </td>
+            </tr>
           })}
 
-        </div>
+        </table>
       </div>
+
     </div>
   </div>
 }

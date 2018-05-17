@@ -1,4 +1,4 @@
-import { exec } from './api'
+import { exec } from '../lib/api'
 import { Either } from 'tsmonad'
 import BigNumber from 'bignumber.js'
 

@@ -1,6 +1,6 @@
 import { Either } from 'tsmonad'
 import BigNumber from 'bignumber.js'
-import { exec } from './api'
+import { exec } from '../lib/api'
 
 export interface DelegateTypeRemote {
   address: string

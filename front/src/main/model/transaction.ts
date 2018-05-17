@@ -1,7 +1,7 @@
 import * as Long from 'long'
 import { Either } from 'tsmonad'
 import BigNumber from 'bignumber.js'
-import { exec } from './api'
+import { exec } from '../lib/api'
 import { mutableReverse } from '../lib/utils'
 import Transaction from 'semux/dist/types/lib/Transaction'
 import { Buffer } from 'buffer'

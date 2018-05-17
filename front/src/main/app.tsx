@@ -35,7 +35,7 @@ export interface State {
 
 const initialState: State = {
   location: initialLocationState,
-  wallet: Maybe.nothing(),
+  wallet: undefined,
   /* panels: */
   welcome: initialWelcomeState,
   home: initialHomeState,
@@ -46,6 +46,7 @@ const initialState: State = {
 
 export interface Actions {
   briefFetch: () => (s: State, a: Actions) => void
+  setWallet: (w: WalletState) => (s: State) => State
   /* panels: */
   welcome: WelcomeActions
   location: LocationActions
@@ -59,6 +60,7 @@ const rawActions: Actions = {
   briefFetch: () => (state, actions) => {
     actions.home.fetch(state.location)
   },
+  setWallet: (walletState) => (state) => ({ ...state, wallet: walletState }),
   /* panels: */
   welcome: rawWelcomeActions,
   location: rawLocationActions,
@@ -68,10 +70,10 @@ const rawActions: Actions = {
   delegates: rawDelegatesActions,
 }
 
-const view = (s: State, a: Actions) => (
+const view = (state: State, actions: Actions) => (
   <div>
     {
-      1 === 1
+      !state.wallet
         ? <WelcomeView />
         :
         <div>
@@ -85,7 +87,7 @@ const view = (s: State, a: Actions) => (
     }
     <hr />
     <p>debug:</p>
-    <pre> {JSON.stringify(s, null, 4)}</pre>
+    <pre> {JSON.stringify(state, null, 4)}</pre>
   </div>
 )
 

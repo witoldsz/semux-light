@@ -21,7 +21,7 @@ export function concat<T>(arrays: T[][]): T[] {
   return Array.prototype.concat.apply([], arrays)
 }
 
-export function readJsonInputFile(e: HTMLInputElement): Promise<object> {
+export function readJsonInputFile(e: HTMLInputElement): Promise<any> {
   return new Promise((success, err) =>  {
     if (e.files && e.files.length > 0 && e.files.item(0)) {
       const reader = new FileReader()

@@ -1,7 +1,7 @@
 import Network from 'semux/dist/types/lib/Network'
 import { Maybe } from 'tsmonad'
 
-export type WalletState = Maybe<Wallet>
+export type WalletState = Wallet | undefined
 
 export interface Wallet {
   version: number
@@ -16,4 +16,8 @@ export interface Account {
 
 export interface WalletActions {
   load: () => void
+}
+
+export async function readWallet(json: any): Promise<Wallet | undefined> {
+  return json as Wallet
 }

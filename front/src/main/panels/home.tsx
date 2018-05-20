@@ -6,9 +6,9 @@ import { DateTime } from 'luxon'
 import { BlockType, fetchLatestBlock } from '../model/block'
 import { AccountType, fetchAccount } from '../model/account'
 import { Maybe } from 'tsmonad'
-import { locationAddrs, LocationState, locationAddr1st } from '../lib/location'
 import { fetchLastTxs, TransactionType, caseTypeOf } from '../model/transaction'
 import { localeDateTime, transfer, sem, addressAbbr } from '../lib/format'
+import { addresses, address1st } from '../model/wallet'
 
 const MAX_TXS_SIZE = 5
 
@@ -34,20 +34,20 @@ async function fetchAccAndTxs(address: string): Promise<AccountAndTxs> {
 }
 
 export interface HomeActions {
-  fetch: (ls: LocationState) => (s: HomeState, a: HomeActions) => HomeState
+  fetch: (r: State) => (s: HomeState, a: HomeActions) => HomeState
   fetchBlockResponse: (b: BlockType) => (s: HomeState) => HomeState
   fetchAccountsResponse: (a: AccountAndTxs[]) => (s: HomeState) => HomeState
   fetchError: (error) => (s: HomeState) => HomeState
 }
 
 export const rawHomeActions: HomeActions = {
-  fetch: (locationState) => (state, actions) => {
+  fetch: (rootState) => (state, actions) => {
     fetchLatestBlock()
       .then(actions.fetchBlockResponse)
       .catch(actions.fetchError)
 
     Promise
-      .all(locationAddrs(locationState).map(fetchAccAndTxs))
+      .all(addresses(rootState.wallet).map(fetchAccAndTxs))
       .then(actions.fetchAccountsResponse)
       .catch(actions.fetchError)
 
@@ -105,7 +105,7 @@ export function HomeView(rootState: State) {
           <tr>
             <td class="b lh-title pv1">Coinbase:</td>{' '}
             <td>
-              {addressAbbr(locationAddr1st(rootState.location) || '')}
+              {addressAbbr(address1st(rootState.wallet))}
             </td>
           </tr>
           <tr>

@@ -1,4 +1,4 @@
-import { Either } from 'tsmonad'
+import { Either, Maybe } from 'tsmonad'
 
 export type WebData<T> = 'NotAsked' | 'Loading' | Either<string, T>
 
@@ -18,6 +18,14 @@ export function isError(a: WebData<any>): a is Either<string, any> {
   })
 }
 
+export function isSuccess<T>(a: WebData<T>): a is Either<string, T> {
+  return a instanceof Either && a.caseOf({
+    // TODO: waiting for release https://github.com/cbowdon/TsMonad/pull/45
+    left: () => false,
+    right: () => true,
+  })
+}
+
 export function errorOf(a: WebData<any>): string {
   return (a instanceof Either
     ? a.caseOf({
@@ -28,14 +36,24 @@ export function errorOf(a: WebData<any>): string {
   )
 }
 
-export interface WebDataCasePatterns<TA, TB> {
-  notAsked: (() => TB)
-  loading: (() => TB)
-  failure: ((s: string) => TB)
-  success: ((r: TA) => TB)
+export function successOf<T>(a: WebData<T>): Maybe<T> {
+  return (a instanceof Either
+    ? a.caseOf({
+      left: () => Maybe.nothing(),
+      right: Maybe.just,
+    })
+    : Maybe.nothing()
+  )
 }
 
-export function caseWebDataOf<TA, TB>(a: WebData<TA>, pattern: WebDataCasePatterns<TA, TB>): TB {
+export interface WebDataCasePatterns<A, B> {
+  notAsked: (() => B)
+  loading: (() => B)
+  failure: ((s: string) => B)
+  success: ((r: A) => B)
+}
+
+export function caseWebDataOf<A, B>(a: WebData<A>, pattern: WebDataCasePatterns<A, B>): B {
   return (isNotAsked(a)
     ? pattern.notAsked()
     : isLoading(a)

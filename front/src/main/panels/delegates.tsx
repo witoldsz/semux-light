@@ -4,9 +4,9 @@ import { fetchVotes, AccountVoteType } from '../model/vote'
 import { State, Actions } from '../app'
 import { addressAbbr, sem } from '../lib/format'
 import BigNumber from 'bignumber.js'
-import { locationAddrs, locationAddr1st } from '../lib/location'
 import { ZERO } from '../lib/utils'
 import { Either } from 'tsmonad'
+import { addresses, address1st } from '../model/wallet'
 
 type MyAddress = string
 type DelegateAddress = string
@@ -43,12 +43,12 @@ export const rawDelegatesActions: DelegatesActions = {
       .then(actions.fetchResultDelegates)
       .catch(actions.fetchError)
 
-    locationAddrs(rootState.location).forEach((myAddress) => {
+    addresses(rootState.wallet).forEach((myAddress) => {
       fetchVotes(myAddress)
         .then((list) => actions.fetchResultVotes({ myAddress, list }))
         .catch(actions.fetchError)
     })
-    const myAddress = state.myAddress || locationAddr1st(rootState.location) || ''
+    const myAddress = state.myAddress || address1st(rootState.wallet) || ''
     return { ...state, myAddress, errorMessage: '' }
   },
   fetchResultDelegates: (list) => (state) => ({
@@ -81,7 +81,7 @@ export function DelegatesView(rootState: State, rootActions: Actions) {
         onchange={(e) => actions.myAddress(e.target.value)}
       >
         {
-          locationAddrs(rootState.location).map((myAddress) => (
+          addresses(rootState.wallet).map((myAddress) => (
             <option selected={state.myAddress === myAddress} value={myAddress}>
               {myAddress}
             </option>

@@ -17,13 +17,15 @@ import {
   DelegatesView, DelegatesState, blankDelegates, DelegatesActions, rawDelegatesActions,
 } from './panels/delegates'
 import { SendView, SendState, initialSendState, SendActions, rawSendActions } from './panels/send'
-import * as semux from 'semux'
 import { ZERO } from './lib/utils'
 import { WelcomeView, WelcomeState, initialWelcomeState, WelcomeActions, rawWelcomeActions } from './panels/welcome'
 import { WalletState } from './model/wallet'
+import { InfoType, InfoState, fetchInfo } from './model/info'
+import { isError, errorOf, successOf, isSuccess } from './lib/webdata'
 
 export interface State {
   location: LocationState
+  info: InfoState
   wallet: WalletState
   /* panels: */
   welcome: WelcomeState
@@ -35,6 +37,7 @@ export interface State {
 
 const initialState: State = {
   location: initialLocationState,
+  info: 'NotAsked',
   wallet: undefined,
   /* panels: */
   welcome: initialWelcomeState,
@@ -46,6 +49,7 @@ const initialState: State = {
 
 export interface Actions {
   briefFetch: () => (s: State, a: Actions) => void
+  setInfo: (i: InfoState) => (s: State) => State
   setWallet: (w: WalletState) => (s: State) => State
   /* panels: */
   welcome: WelcomeActions
@@ -58,8 +62,9 @@ export interface Actions {
 
 const rawActions: Actions = {
   briefFetch: () => (state, actions) => {
-    actions.home.fetch(state.location)
+    actions.home.fetch(state)
   },
+  setInfo: (infoState) => (state) => ({ ...state, info: infoState }),
   setWallet: (walletState) => (state) => ({ ...state, wallet: walletState }),
   /* panels: */
   welcome: rawWelcomeActions,
@@ -72,7 +77,18 @@ const rawActions: Actions = {
 
 const view = (state: State, actions: Actions) => (
   <div>
-    {
+    <p class="tc bg-yellow">
+      {successOf(state.info)
+        .fmap((i) => `Network: ${i.network}`)
+        .valueOr('')
+      }
+    </p>
+    {isError(state.info)
+      ?
+      <p class="pa2 dark-red">{errorOf(state.info)}</p>
+      :
+      isSuccess(state.info)
+      ?
       !state.wallet
         ? <WelcomeView />
         :
@@ -84,6 +100,8 @@ const view = (state: State, actions: Actions) => (
           <Route path={Nav.Transactions} render={TransactionsView} />
           <Route path={Nav.Delegates} render={DelegatesView} />
         </div>
+      :
+      <p class="tc pa3">Please wait</p>
     }
     <hr />
     <p>debug:</p>
@@ -93,9 +111,10 @@ const view = (state: State, actions: Actions) => (
 
 const actions = app(initialState, rawActions, view, document.body)
 
+fetchInfo().then(actions.setInfo)
+
 locationSubscribe((locationState) => {
   actions.location.setCurrent(locationState)
-  actions.transactions.fetch({ locationState })
 })
 
 // actions.briefFetch()

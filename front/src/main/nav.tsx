@@ -58,6 +58,7 @@ const navClass = [
   'ph2',
   'pv1',
   'ba',
+  'b--black',
   'border-box',
   'mr3',
 ]

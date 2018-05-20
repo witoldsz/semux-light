@@ -1,5 +1,5 @@
 import { Buffer } from 'buffer'
-import BigNumber from 'bignumber.js'
+import { BigNumber } from 'bignumber.js'
 
 export const ZERO = new BigNumber(0)
 

@@ -1,13 +1,13 @@
 import { h } from 'hyperapp'
 import { WebData, isNotAsked, caseWebDataOf } from '../lib/webdata'
 import { State, Actions } from '../app'
-import { locationAddr1st, LocationState, locationAddrs } from '../lib/location'
 import { TransactionType } from '../model/transaction'
 import { Either } from 'tsmonad'
 import { fetchTxs } from '../model/transaction'
 import { log } from '../lib/utils'
 import { Nav } from '../nav'
 import { transfer, sem } from '../lib/format'
+import { addresses, address1st } from '../model/wallet'
 
 const LIST_SIZE = 100
 
@@ -42,18 +42,18 @@ function pageOf(state: TxsState, address: string) {
 }
 
 export interface TxsActions {
-  fetch: (a: { locationState: LocationState, newAddress?: string })
+  fetch: (a: { rootState: State, newAddress?: string })
     => (state: TxsState, actions: TxsActions) => TxsState
   fetchResult: (a: { page: Page, result: Either<string, TransactionType[]> })
     => (state: TxsState) => TxsState
 }
 
 export const rawTxsActions: TxsActions = {
-  fetch: ({ locationState, newAddress }) => (state, actions) => {
-    if (locationState.route !== Nav.Transactions) {
+  fetch: ({ rootState, newAddress }) => (state, actions) => {
+    if (rootState.location.route !== Nav.Transactions) {
       return state
     }
-    const address = newAddress || state.selectedAddress || locationAddr1st(locationState)
+    const address = newAddress || state.selectedAddress || address1st(rootState.wallet)
     if (!address) {
       return state
     }
@@ -107,12 +107,12 @@ export function TransactionsView(rootState: State, rootActions: Actions) {
       <select
         class="f6 h2 bg-white ma1 b--black-20"
         onchange={(e) => actions.fetch({
-          locationState: rootState.location,
+          rootState,
           newAddress: e.target.value,
         })}
       >
         {
-          locationAddrs(rootState.location).map((myAddress) => (
+          addresses(rootState.wallet).map((myAddress) => (
             <option selected={state.selectedAddress === myAddress} value={myAddress}>
               {myAddress}
             </option>

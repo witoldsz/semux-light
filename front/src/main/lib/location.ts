@@ -1,20 +1,15 @@
 import { h } from 'hyperapp'
 import { State } from '../app'
 import { log } from './utils'
+import { Observable, fromEvent } from 'rxjs'
+import { map, startWith, pluck } from 'rxjs/operators'
 
 export interface LocationState {
   route: string
-  params: {
-    addr: string
-    [index: string]: string,
-  }
 }
 
 export const initialLocationState: LocationState = {
   route: '',
-  params: {
-    addr: '',
-  },
 }
 
 export interface LocationActions {
@@ -25,9 +20,7 @@ export const rawLocationActions: LocationActions = {
   setCurrent: (state: LocationState) => state,
 }
 
-export type Subscribe = (a: LocationActions) => void
-
-export function locationSubscribe(sub: (s: LocationState) => any) {
+export function locationSubscribe(sub: (s: LocationState) => any): void {
   function listener() {
     sub(parseLocation(window.location.hash))
   }
@@ -35,20 +28,19 @@ export function locationSubscribe(sub: (s: LocationState) => any) {
   window.addEventListener('hashchange', listener, false)
 }
 
-export function locationAddr1st(l: LocationState): string | undefined {
-  return locationAddrs(l)[0]
-}
-
-export function locationAddrs(l: LocationState): string[] {
-  return l.params.addr.split(',')
-}
+export const locationChanges = fromEvent(window, 'hashchange')
+  .pipe(
+    map((e: HashChangeEvent) => e.newURL),
+    startWith(window.location.hash),
+    map(parseLocation),
+  )
 
 type LinkProps = { to: string } & JSX.IntrinsicElements
 
 export const Link = (props: LinkProps, children) => (s: State) => {
   const { to, ...otherProps } = props
   return h('a', {
-    href: `#/${to}?addr=${s.location.params.addr || ''}`,
+    href: `#/${to}`,
     ...otherProps,
   }, children)
 }
@@ -63,29 +55,8 @@ function routeMatches(s: LocationState, path: string) {
   const c = s.route
 }
 
-function parseLocation(hash: string): LocationState {
-  return hash
-    .substr(1)
-    .split('/')
-    .filter((i) => i)
-    .reduce((acc: LocationState, elem: string) => {
-      const [route, paramsStr] = elem.split('?')
-      const params = (paramsStr
-        ? paramsStr
-          .split('&')
-          .filter((i) => i)
-          .reduce((acc, pair) => {
-            const [key, val] = pair.split('=')
-            return {
-              ...acc,
-              [decodeURIComponent(key)]: decodeURIComponent(val),
-            }
-          }, {})
-        : undefined
-      )
-      return {
-        route: acc.route + (acc.route ? '/' : '') + route,
-        params: { ...acc.params, ...params },
-      }
-    }, initialLocationState)
+function parseLocation(url: string): LocationState {
+  const hash =  url.split('#').slice(1).join('#')
+  const route = hash.split('/').filter((x) => x).join('/')
+  return { route }
 }

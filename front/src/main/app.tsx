@@ -7,7 +7,6 @@ import {
 } from './lib/location'
 import { LocationState } from './lib/location'
 import BigNumber from 'bignumber.js'
-import { DateTime } from 'luxon'
 import { Maybe, maybe } from 'tsmonad'
 import {
   TransactionsView, TxsState, initialTxsState, TxsActions,

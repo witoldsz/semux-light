@@ -21,7 +21,6 @@
     "bignumber.js": "7.0.1",
     "hyperapp": "1.2.5",
     "long": "4.0.0",
-    "luxon": "1.2.0",
     "node-forge": "0.7.5",
     "rxjs": "6.1.0",
     "semux": "1.1.1",

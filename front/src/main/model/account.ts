@@ -19,7 +19,7 @@ export interface AccountType {
 }
 
 export async function fetchAccount(address: string): Promise<AccountType> {
-  const path = `/v2.0.0/account?address=${address}`
+  const path = `/v2.1.0/account?address=${address}`
   const remote = await exec<AccountTypeRemote>('GET', path)
   return {
     address: remote.address,

@@ -49,7 +49,7 @@ export function caseTypeOf<T>(tx: TransactionType, otherwise: T, casePattern: Tr
 }
 
 export async function fetchTxs(address: string, from: number, to: number): Promise<TransactionType[]> {
-  const path = `/v2.0.0/account/transactions?address=${address}&from=${from}&to=${to}`
+  const path = `/v2.1.0/account/transactions?address=${address}&from=${from}&to=${to}`
   const remotes = await exec<TransactionTypeRemote[]>('GET', path)
   return mutableReverse(remotes.map((r, idx) => ({
     blockNumber: r.blockNumber,
@@ -67,7 +67,7 @@ export async function fetchTxs(address: string, from: number, to: number): Promi
 
 export function publishTx(tx: Transaction): Promise<undefined> {
   const encodedTx = Buffer.from(tx.toBytes().buffer).toString('hex')
-  return exec('POST', `/v2.0.0/transaction/raw?raw=${encodedTx}`)
+  return exec('POST', `/v2.1.0/transaction/raw?raw=${encodedTx}`)
 }
 
 export async function fetchLastTxs(account: AccountType, { page, size }: { page: number, size: number }) {

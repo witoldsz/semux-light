@@ -13,7 +13,7 @@ export interface BlockType {
 }
 
 export async function fetchLatestBlock(): Promise<BlockType> {
-  const path = '/v2.0.0/latest-block'
+  const path = '/v2.1.0/latest-block'
   const remote = await exec<BlockTypeRemote>('GET', path)
   return {
     hash: remote.hash,

@@ -16,13 +16,13 @@ async function main() {
   const proxyMiddleware = (req, res, next) => {
     proxy.web(req, res, undefined, console.error)
   }
-  app.get('/v2.0.0/info', proxyMiddleware)
-  app.get('/v2.0.0/account', proxyMiddleware)
-  app.get('/v2.0.0/account/transactions', proxyMiddleware)
-  app.get('/v2.0.0/account/votes', proxyMiddleware)
-  app.get('/v2.0.0/delegates', proxyMiddleware)
-  app.get('/v2.0.0/latest-block', proxyMiddleware)
-  app.post('/v2.0.0/transaction/raw', proxyMiddleware)
+  app.get('/v2.1.0/info', proxyMiddleware)
+  app.get('/v2.1.0/account', proxyMiddleware)
+  app.get('/v2.1.0/account/transactions', proxyMiddleware)
+  app.get('/v2.1.0/account/votes', proxyMiddleware)
+  app.get('/v2.1.0/delegates', proxyMiddleware)
+  app.get('/v2.1.0/latest-block', proxyMiddleware)
+  app.post('/v2.1.0/transaction/raw', proxyMiddleware)
 
   const addr = await new Promise((resolve) => {
     const server = app.listen(3333, () => resolve(server.address()))

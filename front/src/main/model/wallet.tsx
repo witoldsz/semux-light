@@ -7,7 +7,7 @@ export type WalletState = Wallet | undefined
 
 export interface Wallet {
   version: number
-  network: Network
+  network: string
   cipher: { salt: string, iv: string }
   accounts: Account[]
 }
@@ -26,7 +26,7 @@ export async function readWallet(json: any): Promise<Wallet | undefined> {
   return json as Wallet
 }
 
-export function createNewWallet(password: string, network: Network): Wallet {
+export function createNewWallet(password: string, network: string): Wallet {
   const newKey = semux.Key.generateKeyPair()
   const { salt, iv, encryptedPrivKey } = encrypt({ password, key: newKey })
   const newWallet: Wallet = {

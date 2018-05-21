@@ -5,6 +5,7 @@ import { WalletState, Wallet, createNewWallet } from '../model/wallet'
 import { InfoType } from '../model/info'
 import { successOf } from '../lib/webdata'
 import semux from 'semux'
+import { saveJsonFile } from '../lib/saveFile'
 
 export interface WelcomeState {
   action: Action | undefined
@@ -12,16 +13,16 @@ export interface WelcomeState {
   createMessage: string
 }
 
-export const initialWelcomeState: WelcomeState = {
-  action: undefined,
-  errorMessage: '',
-  createMessage: '',
-}
-
 enum Action {
   Load,
   CreateNew,
   ImportKey,
+}
+
+export const initialWelcomeState: WelcomeState = {
+  action: undefined,
+  errorMessage: '',
+  createMessage: '',
 }
 
 export interface WelcomeActions {
@@ -53,11 +54,12 @@ export const rawWelcomeActions: WelcomeActions = {
       return { ...state, createMessage: 'Password cannot be empty' }
     }
     successOf(rootState.info).fmap((info) => {
-      const wallet = createNewWallet(password, semux.Network.TESTNET)
+      const wallet = createNewWallet(password, info.network)
       rootActions.setWallet(wallet)
+      saveJsonFile(wallet)
     })
 
-    return state
+    return initialWelcomeState
   },
 }
 
@@ -90,9 +92,21 @@ export const WelcomeView = () => (rootState: State, rootActions: Actions) => {
         <input
           type="radio"
           name="welcome"
+          checked={state.action === Action.CreateNew}
           onclick={() => actions.setAction(Action.CreateNew)}
         />{' '}
         Create new wallet
+    </label>
+    </div>
+    <div class="mv2">
+      <label>
+        <input
+          type="radio"
+          name="welcome"
+          checked={state.action === Action.ImportKey}
+          onclick={() => actions.setAction(Action.ImportKey)}
+        />{' '}
+        Import key into new wallet (TODO)
     </label>
     </div>
     {state.action === Action.CreateNew &&

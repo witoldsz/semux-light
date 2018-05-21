@@ -47,7 +47,6 @@ const initialState: State = {
 }
 
 export interface Actions {
-  briefFetch: () => (s: State, a: Actions) => void
   setInfo: (i: InfoState) => (s: State) => State
   setWallet: (w: WalletState) => (s: State) => State
   /* panels: */
@@ -60,9 +59,6 @@ export interface Actions {
 }
 
 const rawActions: Actions = {
-  briefFetch: () => (state, actions) => {
-    actions.home.fetch(state)
-  },
   setInfo: (infoState) => (state) => ({ ...state, info: infoState }),
   setWallet: (walletState) => (state) => ({ ...state, wallet: walletState }),
   /* panels: */
@@ -115,7 +111,3 @@ fetchInfo().then(actions.setInfo)
 locationSubscribe((locationState) => {
   actions.location.setCurrent(locationState)
 })
-
-// actions.briefFetch()
-
-// setInterval(actions.briefFetch, 10000)

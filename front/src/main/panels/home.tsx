@@ -1,5 +1,5 @@
 import { h } from 'hyperapp'
-import { State } from '../app'
+import { State, Actions } from '../app'
 import BigNumber from 'bignumber.js'
 import { ZERO, concat, mutableReverse } from '../lib/utils'
 import { BlockType, fetchLatestBlock } from '../model/block'
@@ -10,12 +10,14 @@ import { localeDateTime, transfer, sem, addressAbbr } from '../lib/format'
 import { addresses, address1st } from '../model/wallet'
 
 const MAX_TXS_SIZE = 5
+const FETCH_INTERVAL = 20000
 
 export interface HomeState {
   errorMessage: string,
   block: Maybe<BlockType>
   accounts: AccountType[]
   transactions: TransactionType[]
+  fetchTimeoutId: number | undefined
 }
 
 export const initialHomeState: HomeState = {
@@ -23,6 +25,7 @@ export const initialHomeState: HomeState = {
   block: Maybe.nothing(),
   accounts: [],
   transactions: [],
+  fetchTimeoutId: undefined,
 }
 
 type AccountAndTxs = [AccountType, TransactionType[]]
@@ -34,12 +37,14 @@ async function fetchAccAndTxs(address: string): Promise<AccountAndTxs> {
 
 export interface HomeActions {
   fetch: (r: State) => (s: HomeState, a: HomeActions) => HomeState
+  cancelNextFetch: () => (s: HomeState) => HomeState
   fetchBlockResponse: (b: BlockType) => (s: HomeState) => HomeState
   fetchAccountsResponse: (a: AccountAndTxs[]) => (s: HomeState) => HomeState
   fetchError: (error) => (s: HomeState) => HomeState
 }
 
 export const rawHomeActions: HomeActions = {
+
   fetch: (rootState) => (state, actions) => {
     fetchLatestBlock()
       .then(actions.fetchBlockResponse)
@@ -50,38 +55,54 @@ export const rawHomeActions: HomeActions = {
       .then(actions.fetchAccountsResponse)
       .catch(actions.fetchError)
 
-    return { ...state, errorMessage: '' }
+    const fetchTimeoutId = setTimeout(() => actions.fetch(rootState), FETCH_INTERVAL)
+
+    return { ...state, fetchTimeoutId, errorMessage: '' }
   },
+
+  cancelNextFetch: () => (state) => {
+    clearTimeout(state.fetchTimeoutId)
+    return { ...state, fetchTimeoutId: undefined }
+  },
+
   fetchBlockResponse: (block) => (state) => ({
     ...state,
     block: Maybe.just(block),
   }),
+
   fetchAccountsResponse: (accAndTxsArr) => (state) => {
     const transactions = Array.from(
-      concat(accAndTxsArr.map(([_, b]) => b))
+      concat(accAndTxsArr.map(([_, txs]) => txs))
         .reduce((map, tx) => map.set(tx.hash, tx), new Map<string, TransactionType>())
         .values(),
     )
-      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+      .sort((tx1, tx2) => tx2.timestamp.getTime() - tx1.timestamp.getTime())
       .slice(0, MAX_TXS_SIZE)
 
     return {
       ...state,
-      accounts: accAndTxsArr.map(([a, _]) => a),
+      accounts: accAndTxsArr.map(([acc, _]) => acc),
       transactions,
     }
   },
+
   fetchError: (error) => (state) => ({
     ...state,
     errorMessage: error.message,
   }),
 }
 
-export function HomeView(rootState: State) {
+export function HomeView(rootState: State, rootActions: Actions) {
   const state = rootState.home
-  return <div class="pa2">
+  const actions = rootActions.home
+  return <div
+    class="pa2"
+    key="HomeView"
+    oncreate={() => actions.fetch(rootState)}
+    ondestroy={() => actions.cancelNextFetch()}
+  >
     {state.errorMessage
-      ? <div class="dark-red">{state.errorMessage}</div>
+      ? <div class="dark-red pb3">{state.errorMessage}</div>
       : ''
     }
     <div class="flex">

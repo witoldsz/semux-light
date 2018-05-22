@@ -1,16 +1,18 @@
 import { h, app } from 'hyperapp'
 import { State, Actions } from '../app'
 import { readJsonInputFile } from '../lib/utils'
-import { WalletState, Wallet, createNewWallet } from '../model/wallet'
+import { WalletState, Wallet, createNewWallet, validateWallet } from '../model/wallet'
 import { InfoType } from '../model/info'
 import { successOf } from '../lib/webdata'
 import semux from 'semux'
 import { saveJsonFile } from '../lib/saveFile'
+import { Password } from '../lib/password'
 
 export interface WelcomeState {
   action: Action | undefined
   errorMessage: string
   createMessage: string
+  walletFile: any
 }
 
 enum Action {
@@ -23,40 +25,50 @@ export const initialWelcomeState: WelcomeState = {
   action: undefined,
   errorMessage: '',
   createMessage: '',
+  walletFile: undefined,
 }
 
 export interface WelcomeActions {
   setAction: (_: Action) => (s: WelcomeState) => WelcomeState
   setError: (_: any) => (s: WelcomeState) => WelcomeState
-  load: (_: [Actions, HTMLInputElement]) => (s: WelcomeState, a: WelcomeActions) => WelcomeState
-  create: (_: [string, string, State, Actions]) => (s: WelcomeState) => WelcomeState
+  setWalletFileBody: (body: any) => (s: WelcomeState) => WelcomeState
+  load: (_: [Actions, Password]) => (s: WelcomeState, a: WelcomeActions) => WelcomeState
+  create: (_: [Password, Password, State, Actions]) => (s: WelcomeState) => WelcomeState
 }
 
 export const rawWelcomeActions: WelcomeActions = {
   setAction: (action) => (state) => ({ ...state, action }),
+
   setError: (error = '') => (state) => (
     {
       ...state,
       errorMessage: error.message || error.toString(),
     }
   ),
-  load: ([rootActions, inputElem]) => (state, actions) => {
-    readJsonInputFile(inputElem)
-      .then(rootActions.setWallet)
-      .catch(actions.setError)
-    return { ...state, action: undefined, errorMessage: '' }
+
+  setWalletFileBody: (body) => (state) => ({ ...state, walletFile: body}),
+
+  load: ([rootActions, password]) => (state, actions) => {
+    try {
+      const wallet = validateWallet(state.walletFile, password, 'TESTNET')
+      rootActions.setWallet({ ...wallet, password })
+      return initialWelcomeState
+    } catch (error) {
+      return { ...state, errorMessage: error.message }
+    }
   },
+
   create: ([password, password2, rootState, rootActions]) => (state) => {
-    if (password !== password2) {
+    if (!password.equals(password2)) {
       return { ...state, createMessage: 'Passwords does not match' }
     }
-    if (!password) {
+    if (password.isEmpty()) {
       return { ...state, createMessage: 'Password cannot be empty' }
     }
     successOf(rootState.info).fmap((info) => {
       const wallet = createNewWallet(password, info.network)
-      rootActions.setWallet(wallet)
-      saveJsonFile(wallet)
+      rootActions.setWallet({ ...wallet, password })
+      saveJsonFile('semux-wallet.json', wallet)
     })
 
     return initialWelcomeState
@@ -75,7 +87,10 @@ export const WelcomeView = () => (rootState: State, rootActions: Actions) => {
           type="radio"
           name="welcome"
           checked={state.action === Action.Load}
-          onclick={() => document.getElementById('load')!.click()}
+          onclick={() => {
+            actions.setAction(Action.Load)
+            document.getElementById('load')!.click()
+          }}
         />{' '}
         Load wallet from file
       </label>
@@ -83,7 +98,7 @@ export const WelcomeView = () => (rootState: State, rootActions: Actions) => {
         <input
           type="file"
           id="load"
-          onchange={(evt) => actions.load([rootActions, evt.target])}
+          onchange={(evt) => readJsonInputFile(evt.target).then(actions.setWalletFileBody)}
         />
       </div>
     </div>
@@ -109,22 +124,21 @@ export const WelcomeView = () => (rootState: State, rootActions: Actions) => {
         Import key into new wallet (TODO)
     </label>
     </div>
+    <div class="mv3">
+      <label class="fw7 f6">
+        Password
+        <input
+          key="password"
+          id="password"
+          type="password"
+          autocomplete="off"
+          class="db pa2 br2 b--black-20 ba f6"
+          oninput={(evt) => { }}
+        />
+      </label>
+    </div>
     {state.action === Action.CreateNew &&
       <div>
-        <div class="mv3">
-          <label class="fw7 f6">
-            Password
-            <input
-              key="password"
-              id="password"
-              type="password"
-              autocomplete="off"
-              class="db pa2 br2 b--black-20 ba f6"
-              oninput={(evt) => { }}
-            />
-          </label>
-        </div>
-
         <div class="mv3">
           <label class="fw7 f6">
             Repeat password
@@ -141,8 +155,8 @@ export const WelcomeView = () => (rootState: State, rootActions: Actions) => {
 
         <div>
           <button onclick={() => actions.create([
-            textInputById('password'),
-            textInputById('password2'),
+            passwordById('password'),
+            passwordById('password2'),
             rootState,
             rootActions,
           ])}>
@@ -154,6 +168,6 @@ export const WelcomeView = () => (rootState: State, rootActions: Actions) => {
   </div>
 }
 
-function textInputById(id: string): string {
-  return (document.getElementById(id) as HTMLInputElement).value.trim()
+function passwordById(id: string): Password {
+  return new Password((document.getElementById(id) as HTMLInputElement).value)
 }

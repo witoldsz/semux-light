@@ -1,5 +1,6 @@
 import * as forge from 'node-forge'
 import semux from 'semux'
+import { Password } from './password'
 
 const { random, pkcs5  } = forge
 const { createBuffer, hexToBytes } = forge.util
@@ -12,7 +13,7 @@ export interface EncryptOpts {
   salt?: string
   iv?: string
   key: { getEncodedPrivateKey: () => Uint8Array } // use 'Key': https://github.com/semuxproject/semux-js-sdk/issues/24
-  password: string
+  password: Password
 }
 
 /** @returns AES encrypted PKCS#8 private key as HEX string */
@@ -23,7 +24,7 @@ export function encrypt({ salt, iv, key, password }: EncryptOpts) {
   salt = hexToBytes('e9e5defb129ef8828bfbdba9d547b06b')
   iv = hexToBytes('6606b217ab936f1db70d6f189110d641')
 
-  const aesKey = pkcs5.pbkdf2(password, salt, PBKDF2_ITERATIONS, AES_KEY_LEN)
+  const aesKey = pkcs5.pbkdf2(password.value, salt, PBKDF2_ITERATIONS, AES_KEY_LEN)
   const cipher = createCipher('AES-CBC', aesKey)
   cipher.start({ iv })
 

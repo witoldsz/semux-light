@@ -59,7 +59,7 @@ export const rawWelcomeActions: WelcomeActions = {
   load: ([password, rootState, rootActions]) => (state, actions) => {
     try {
       successOf(rootState.info).fmap((info) => {
-        const wallet = validateWallet(state.walletFile, password, info.network)
+        const wallet = validateWallet(state.walletFile, info.network)
         rootActions.setWallet(validatePassword(wallet, password))
       })
       return initialWelcomeState

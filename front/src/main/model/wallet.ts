@@ -23,7 +23,7 @@ export interface WalletActions {
   load: () => void
 }
 
-export function validateWallet(file: string, password: Password, network: string): Wallet {
+export function validateWallet(file: string, network: string): Wallet {
 
   throwIf(!file, 'Wallet file not loaded.')
   const fileFormat = (supp: string) => `Invalid wallet file format: ${supp}.`

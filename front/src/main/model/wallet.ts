@@ -23,12 +23,46 @@ export interface WalletActions {
   load: () => void
 }
 
-export function validateWallet(json: any, password: Password, network: string): Wallet {
-  // TODO: validate structure, check password
-  if (!json) {
-    throw new Error('Wallet file not loaded.')
+export function validateWallet(file: string, password: Password, network: string): Wallet {
+
+  throwIf(!file, 'Wallet file not loaded.')
+  const fileFormat = (supp: string) => `Invalid wallet file format: ${supp}.`
+  let wallet: Wallet
+  try {
+    wallet = JSON.parse(file)
+  } catch (err) {
+    throw new Error(fileFormat(err.message))
   }
-  return json as Wallet
+  throwIf(wallet.version !== 1, 'Unrecognized wallet file version.')
+  throwIf(wallet.network !== network,
+    `Wallet is for ${wallet.network}, this is ${network}.`,
+  )
+  throwIf(!wallet.cipher, fileFormat('missing "cipher"'))
+  throwIf(typeof wallet.cipher.iv !== 'string', fileFormat('missing "cipher.iv"'))
+  throwIf(typeof wallet.cipher.salt !== 'string', fileFormat('missing "cipher.salt"'))
+  throwIf(!(wallet.accounts instanceof Array), fileFormat('"accounts"'))
+  throwIf(wallet.accounts.length < 1, fileFormat('empty accounts'))
+  throwIf(typeof wallet.accounts[0].address !== 'string', ('"accounts.address"'))
+  throwIf(typeof wallet.accounts[0].encrypted !== 'string', fileFormat('"account.encrypted"'))
+  return wallet
+}
+
+export function validatePassword(wallet: Wallet, password: Password): WalletState {
+  const walletState: WalletState = { ...wallet, password }
+  for (let i = 0; i < wallet.accounts.length; ++i) {
+    const account = wallet.accounts[i]
+    const key = getKey(walletState, i)
+    throwIf(
+      account.address.replace('0x', '') !== key.toAddressHexString().replace('0x', ''),
+      'Invalid password.')
+  }
+  return walletState
+}
+
+function throwIf(cond: boolean, msg: string) {
+  if (cond) {
+    throw new Error(msg)
+  }
 }
 
 export function createNewWallet(password: Password, network: string): Wallet {
@@ -70,5 +104,9 @@ export function getKey(s: WalletState, accountIdx: number): Key {
     password: s.password,
     encryptedPrivKey: s.accounts[accountIdx].encrypted,
   })
-  return semux.Key.importEncodedPrivateKey(hexBytes(privKey))
-}
+  const privKeyBytes = hexBytes(privKey)
+  try {
+    return semux.Key.importEncodedPrivateKey(privKeyBytes)
+  } catch (err) {
+    throw new Error('Invalid password.')
+  }}

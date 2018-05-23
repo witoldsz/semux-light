@@ -1,12 +1,13 @@
 import { h, app } from 'hyperapp'
 import { State, Actions } from '../app'
-import { readJsonInputFile } from '../lib/utils'
-import { WalletState, Wallet, createNewWallet, validateWallet } from '../model/wallet'
+import { readInputFile } from '../lib/utils'
+import { WalletState, Wallet, createNewWallet, validateWallet, validatePassword } from '../model/wallet'
 import { InfoType } from '../model/info'
 import { successOf } from '../lib/webdata'
 import semux from 'semux'
 import { saveJsonFile } from '../lib/saveFile'
 import { Password } from '../lib/password'
+import { Either } from 'tsmonad'
 
 export interface WelcomeState {
   action: Action | undefined
@@ -33,7 +34,7 @@ export const initialWelcomeState: WelcomeState = {
 export interface WelcomeActions {
   setAction: (_: Action) => (s: WelcomeState) => WelcomeState
   setError: (_: any) => (s: WelcomeState) => WelcomeState
-  setWalletFileBody: (body: any) => (s: WelcomeState) => WelcomeState
+  setWalletFileBody: (body: Either<string, any>) => (s: WelcomeState) => WelcomeState
   load: (_: [Password, State, Actions]) => (s: WelcomeState, a: WelcomeActions) => WelcomeState
   create: (_: [Password, Password, State, Actions]) => (s: WelcomeState) => WelcomeState
 }
@@ -48,13 +49,18 @@ export const rawWelcomeActions: WelcomeActions = {
     }
   ),
 
-  setWalletFileBody: (body) => (state) => ({ ...state, walletFile: body }),
+  setWalletFileBody: (bodyE) => (state) => (
+    bodyE.caseOf({
+      left: (loadMessage) => ({ ...state, loadMessage }),
+      right: (body) => ({ ...state, loadMessage: '', walletFile: body }),
+    })
+  ),
 
   load: ([password, rootState, rootActions]) => (state, actions) => {
     try {
       successOf(rootState.info).fmap((info) => {
         const wallet = validateWallet(state.walletFile, password, info.network)
-        rootActions.setWallet({ ...wallet, password })
+        rootActions.setWallet(validatePassword(wallet, password))
       })
       return initialWelcomeState
     } catch (error) {
@@ -102,7 +108,10 @@ export const WelcomeView = () => (rootState: State, rootActions: Actions) => {
         <input
           type="file"
           id="load"
-          onchange={(evt) => readJsonInputFile(evt.target).then(actions.setWalletFileBody)}
+          onchange={(evt) => readInputFile(evt.target)
+            .then((body) => actions.setWalletFileBody(Either.right(body)))
+            .catch((err) => actions.setWalletFileBody(Either.left(err.message)))
+          }
         />
       </div>
     </div>

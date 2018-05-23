@@ -21,18 +21,10 @@ export function encrypt({ salt, iv, key, password }: EncryptOpts) {
   salt = salt || random.getBytesSync(16)
   iv = iv || random.getBytesSync(16)
 
-  salt = hexToBytes('e9e5defb129ef8828bfbdba9d547b06b')
-  iv = hexToBytes('6606b217ab936f1db70d6f189110d641')
-
   const aesKey = pkcs5.pbkdf2(password.value, salt, PBKDF2_ITERATIONS, AES_KEY_LEN)
   const cipher = createCipher('AES-CBC', aesKey)
   cipher.start({ iv })
-
-  cipher.update(createBuffer(hexToBytes(
-    '302e020100300506032b6570042204206555ecdfce75bfa5eb8ff0274f55e3651f5c068c3405c648609e7344e90236c5',
-  )))
-
-  // cipher.update(createBuffer(key.getEncodedPrivateKey()))
+  cipher.update(createBuffer(key.getEncodedPrivateKey()))
   cipher.finish()
   return {
     salt: createBuffer(salt).toHex(),

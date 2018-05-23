@@ -1,8 +1,9 @@
-import Network from 'semux/dist/types/lib/Network'
 import { Maybe } from 'tsmonad'
 import semux from 'semux'
 import { encrypt, decrypt } from '../lib/aes'
 import { Password } from '../lib/password'
+import { hexBytes } from '../lib/utils'
+import Key from 'semux/dist/types/lib/Key'
 
 export type WalletState = Wallet & { password: Password } | undefined
 
@@ -23,7 +24,10 @@ export interface WalletActions {
 }
 
 export function validateWallet(json: any, password: Password, network: string): Wallet {
-  // TODO: validate
+  // TODO: validate structure, check password
+  if (!json) {
+    throw new Error('Wallet file not loaded.')
+  }
   return json as Wallet
 }
 
@@ -54,4 +58,17 @@ export function address1st(s: WalletState): string {
   return s && s.accounts[0]
     ? s.accounts[0].address
     : ''
+}
+
+export function getKey(s: WalletState, accountIdx: number): Key {
+  if (!s) {
+    throw new Error('no wallet')
+  }
+  const privKey = decrypt({
+    salt: s.cipher.salt,
+    iv: s.cipher.iv,
+    password: s.password,
+    encryptedPrivKey: s.accounts[accountIdx].encrypted,
+  })
+  return semux.Key.importEncodedPrivateKey(hexBytes(privKey))
 }

@@ -11,19 +11,21 @@ import { Password } from '../lib/password'
 export interface WelcomeState {
   action: Action | undefined
   errorMessage: string
+  loadMessage: string
   createMessage: string
   walletFile: any
 }
 
 enum Action {
-  Load,
-  CreateNew,
-  ImportKey,
+  Load = 'load',
+  CreateNew = 'create_new',
+  ImportKey = 'import',
 }
 
 export const initialWelcomeState: WelcomeState = {
   action: undefined,
   errorMessage: '',
+  loadMessage: '',
   createMessage: '',
   walletFile: undefined,
 }
@@ -32,7 +34,7 @@ export interface WelcomeActions {
   setAction: (_: Action) => (s: WelcomeState) => WelcomeState
   setError: (_: any) => (s: WelcomeState) => WelcomeState
   setWalletFileBody: (body: any) => (s: WelcomeState) => WelcomeState
-  load: (_: [Actions, Password]) => (s: WelcomeState, a: WelcomeActions) => WelcomeState
+  load: (_: [Password, State, Actions]) => (s: WelcomeState, a: WelcomeActions) => WelcomeState
   create: (_: [Password, Password, State, Actions]) => (s: WelcomeState) => WelcomeState
 }
 
@@ -46,15 +48,17 @@ export const rawWelcomeActions: WelcomeActions = {
     }
   ),
 
-  setWalletFileBody: (body) => (state) => ({ ...state, walletFile: body}),
+  setWalletFileBody: (body) => (state) => ({ ...state, walletFile: body }),
 
-  load: ([rootActions, password]) => (state, actions) => {
+  load: ([password, rootState, rootActions]) => (state, actions) => {
     try {
-      const wallet = validateWallet(state.walletFile, password, 'TESTNET')
-      rootActions.setWallet({ ...wallet, password })
+      successOf(rootState.info).fmap((info) => {
+        const wallet = validateWallet(state.walletFile, password, info.network)
+        rootActions.setWallet({ ...wallet, password })
+      })
       return initialWelcomeState
     } catch (error) {
-      return { ...state, errorMessage: error.message }
+      return { ...state, loadMessage: error.message }
     }
   },
 
@@ -137,6 +141,14 @@ export const WelcomeView = () => (rootState: State, rootActions: Actions) => {
         />
       </label>
     </div>
+    {state.action === Action.Load &&
+      <div>
+        <button onclick={() => actions.load([passwordById('password'), rootState, rootActions])}>
+          Load wallet
+        </button>
+        <span class="ml2 dark-red">{state.loadMessage}</span>
+      </div>
+    }
     {state.action === Action.CreateNew &&
       <div>
         <div class="mv3">

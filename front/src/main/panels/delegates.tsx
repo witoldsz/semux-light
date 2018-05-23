@@ -77,7 +77,7 @@ export function DelegatesView(rootState: State, rootActions: Actions) {
     <div class="mv3 dib">
       <label class="fw7 f6" for="exampleInputName1">Address:</label>{' '}
       <select
-        class="f6 h2 bg-white ma1 b--black-20"
+        class="f6 h2"
         onchange={(e) => actions.myAddress(e.target.value)}
       >
         {

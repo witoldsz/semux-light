@@ -44,14 +44,14 @@ export function encrypt({ salt, iv, key, password }: EncryptOpts) {
 export interface DecryptOpts {
   salt: string
   iv: string
-  password: string
+  password: Password
   encryptedPrivKey: string
 }
 
 export function decrypt({ salt, iv, password, encryptedPrivKey }: DecryptOpts): string {
   const saltB = hexToBytes(salt)
   const ivB = hexToBytes(iv)
-  const aesKey = pkcs5.pbkdf2(password, saltB, PBKDF2_ITERATIONS, AES_KEY_LEN)
+  const aesKey = pkcs5.pbkdf2(password.value, saltB, PBKDF2_ITERATIONS, AES_KEY_LEN)
   const decipher = createDecipher('AES-CBC', aesKey)
   decipher.start({ iv: ivB })
   decipher.update(createBuffer(hexToBytes(encryptedPrivKey)))

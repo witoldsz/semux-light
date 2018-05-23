@@ -2,14 +2,14 @@ import { h } from 'hyperapp'
 import { Buffer } from 'buffer'
 import BigNumber from 'bignumber.js'
 import { State, Actions } from '../app'
-import { WebData, isLoading, isError, errorOf } from '../lib/webdata'
+import { WebData, isLoading, isError, errorOf, successOf } from '../lib/webdata'
 import semux from 'semux'
 import * as Long from 'long'
 import { hexBytes, log } from '../lib/utils'
 import { Either } from 'tsmonad'
 import { publishTx } from '../model/transaction'
 import { fetchAccount, AccountType } from '../model/account'
-import { accounts, Account, addresses } from '../model/wallet'
+import { accounts, Account, addresses, getKey } from '../model/wallet'
 import { sem } from '../lib/format'
 
 export interface SendState {
@@ -78,20 +78,22 @@ export const rawSendActions: SendActions = {
   // },
 
   submit: (rootState) => (state, actions) => {
-    // const key = semux.Key.importEncodedPrivateKey(hexBytes(state.privateKey))
-    // fetchAccount(state.from)
-    //   .then((account) => publishTx(new semux.Transaction(
-    //       semux.Network.TESTNET,
-    //       semux.TransactionType.TRANSFER,
-    //       hexBytes(state.to),
-    //       state.amount,
-    //       Long.fromString('5000000'),
-    //       Long.fromNumber(account.nonce - 1),
-    //       Long.fromNumber(Date.now()),
-    //       Buffer.from(state.data, 'utf-8'),
-    //     ).sign(key)))
-    //   .then(() => actions.submitResponse('NotAsked'))
-    //   .catch((e) => actions.submitResponse(Either.left(e.message)))
+    const key = getKey(rootState.wallet, state.selectedAccountIdx)
+    const network = successOf(rootState.info).fmap((info) => {
+      fetchAccount(key.toAddressHexString())
+        .then((account) => publishTx(new semux.Transaction(
+          semux.Network[info.network],
+          semux.TransactionType.TRANSFER,
+          hexBytes(state.to),
+          state.amount,
+          Long.fromString('5000000'),
+          Long.fromNumber(account.nonce),
+          Long.fromNumber(Date.now()),
+          Buffer.from(state.data, 'utf-8'),
+        ).sign(key)))
+        .then(() => actions.submitResponse('NotAsked'))
+        .catch((e) => actions.submitResponse(Either.left(e.message)))
+    })
 
     return {
       ...state,
@@ -117,13 +119,14 @@ export function SendView(rootState: State, rootActions: Actions) {
       <div class="mv3">
         <label class="fw7 f6">
           From
+          <br />
           <select
-            class="f6 h2 w-100"
+            class="f6 h2"
             onchange={(e) => { actions.from(parseInt(e.target.value, 10)) }}
           >
             {
               state.accounts.map((acc, idx) => (
-                <option selected={state.accounts.indexOf(acc) === idx} value={idx}>
+                <option selected={state.accounts.indexOf(acc) === state.selectedAccountIdx} value={idx}>
                   {acc.address}, {sem(acc.available)}
                 </option>
               ))
@@ -161,8 +164,8 @@ export function SendView(rootState: State, rootActions: Actions) {
           id="dataInput"
           type="text"
           class="db w-100 pa2 br2 b--black-20 ba f6"
-          placeholder="Text"
-          oninput={(evt) => actions.data(evt.target.value)}
+          placeholder="Text (UTF-8)"
+          oninput={(evt) => actions.data(evt.target.value.trim())}
         />
       </div>
       <button

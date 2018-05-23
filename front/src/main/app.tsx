@@ -20,7 +20,7 @@ import { ZERO } from './lib/utils'
 import { WelcomeView, WelcomeState, initialWelcomeState, WelcomeActions, rawWelcomeActions } from './panels/welcome'
 import { WalletState } from './model/wallet'
 import { InfoType, InfoState, fetchInfo } from './model/info'
-import { isError, errorOf, successOf, isSuccess } from './lib/webdata'
+import { successOf, isSuccess, isFailure, failureOf } from './lib/webdata'
 
 export interface State {
   location: LocationState
@@ -78,9 +78,9 @@ const view = (state: State, actions: Actions) => (
         .valueOr('')
       }
     </p>
-    {isError(state.info)
+    {isFailure(state.info)
       ?
-      <p class="pa2 dark-red">{errorOf(state.info)}</p>
+      <p class="pa2 dark-red">{failureOf(state.info)}</p>
       :
       isSuccess(state.info)
       ?

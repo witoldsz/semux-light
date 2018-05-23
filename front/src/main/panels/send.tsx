@@ -2,7 +2,7 @@ import { h } from 'hyperapp'
 import { Buffer } from 'buffer'
 import BigNumber from 'bignumber.js'
 import { State, Actions } from '../app'
-import { WebData, isLoading, isError, errorOf, successOf } from '../lib/webdata'
+import { WebData, isLoading, successOf, NotAsked, Failure, failureOf, isFailure } from '../lib/webdata'
 import semux from 'semux'
 import * as Long from 'long'
 import { hexBytes, log } from '../lib/utils'
@@ -91,8 +91,8 @@ export const rawSendActions: SendActions = {
           Long.fromNumber(Date.now()),
           Buffer.from(state.data, 'utf-8'),
         ).sign(key)))
-        .then(() => actions.submitResponse('NotAsked'))
-        .catch((e) => actions.submitResponse(Either.left(e.message)))
+        .then(() => actions.submitResponse(NotAsked))
+        .catch((e) => actions.submitResponse(Failure(e.message)))
     })
 
     return {
@@ -176,7 +176,7 @@ export function SendView(rootState: State, rootActions: Actions) {
         Send
       </button>
       {' '}
-      {isError(state.submit) ? <span class="dark-red">{errorOf(state.submit)}</span> : undefined}
+      {<span class="dark-red">{failureOf(state.submit)}</span>}
     </form>
   </div>
 }

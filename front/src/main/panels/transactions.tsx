@@ -1,5 +1,5 @@
 import { h } from 'hyperapp'
-import { WebData, isNotAsked, caseWebDataOf } from '../lib/webdata'
+import { WebData, isNotAsked, caseWebDataOf, Loading, Success, Failure, isSuccess, successOf } from '../lib/webdata'
 import { State, Actions } from '../app'
 import { TransactionType } from '../model/transaction'
 import { Either } from 'tsmonad'
@@ -44,7 +44,7 @@ function pageOf(state: TxsState, address: string) {
 export interface TxsActions {
   fetch: (a: { rootState: State, newAddress?: string })
     => (state: TxsState, actions: TxsActions) => TxsState
-  fetchResult: (a: { page: Page, result: Either<string, TransactionType[]> })
+  fetchResult: (a: { page: Page, result: WebData<TransactionType[]> })
     => (state: TxsState) => TxsState
 }
 
@@ -61,11 +61,11 @@ export const rawTxsActions: TxsActions = {
     fetchTxs(address, page.from, page.to)
       .then((result) => actions.fetchResult({
         page,
-        result: Either.right(result),
+        result: Success(result),
       }))
       .catch((error) => actions.fetchResult({
         page,
-        result: Either.left(error.message),
+        result: Failure(error.message),
       }))
 
     return {
@@ -74,7 +74,7 @@ export const rawTxsActions: TxsActions = {
         ...state.pages,
         [page.address]: {
           ...page,
-          transactions: isNotAsked(page.transactions) ? 'Loading' : page.transactions,
+          transactions: isNotAsked(page.transactions) ? Loading : page.transactions,
         },
       },
     }
@@ -86,10 +86,9 @@ export const rawTxsActions: TxsActions = {
         ...state.pages,
         [page.address]: {
           ...page,
-          to: result.caseOf({
-            left: () => page.to,
-            right: (txs) => page.from + txs.length,
-          }),
+          to: successOf(result)
+            .fmap((txs) => txs.length + page.from)
+            .valueOr(page.to),
           transactions: result,
         },
       },

@@ -1,6 +1,19 @@
-import { Either, Maybe } from 'tsmonad'
+import { Maybe } from 'tsmonad'
 
-export type WebData<T> = 'NotAsked' | 'Loading' | Either<string, T>
+export const NotAsked: WebData<any> = 'NotAsked'
+export const Loading: WebData<any> = 'Loading'
+export function Success<T>(t: T): WebData<T> {
+  return ['Success', t]
+}
+export function Failure(s: string): WebData<any> {
+  return ['Failure', s]
+}
+
+export type WebData<T> =
+  'NotAsked' |
+  'Loading' |
+  ['Success', T] |
+  ['Failure', string]
 
 export function isNotAsked(a: WebData<any>): a is 'NotAsked' {
   return a === 'NotAsked'
@@ -10,40 +23,20 @@ export function isLoading(a: WebData<any>): a is 'Loading' {
   return a === 'Loading'
 }
 
-export function isError(a: WebData<any>): a is Either<string, any> {
-  return a instanceof Either && a.caseOf({
-    // TODO: waiting for release https://github.com/cbowdon/TsMonad/pull/45
-    left: () => true,
-    right: () => false,
-  })
+export function isFailure(a: WebData<any>): a is ['Failure', string] {
+  return a[0] === 'Failure'
 }
 
-export function isSuccess<T>(a: WebData<T>): a is Either<string, T> {
-  return a instanceof Either && a.caseOf({
-    // TODO: waiting for release https://github.com/cbowdon/TsMonad/pull/45
-    left: () => false,
-    right: () => true,
-  })
+export function isSuccess<T>(a: WebData<T>): a is ['Success', T] {
+  return a[0] === 'Success'
 }
 
-export function errorOf(a: WebData<any>): string {
-  return (a instanceof Either
-    ? a.caseOf({
-      left: (err) => err,
-      right: () => '',
-    })
-    : ''
-  )
+export function failureOf(a: WebData<any>): string {
+  return isFailure(a) ? a[1] : ''
 }
 
 export function successOf<T>(a: WebData<T>): Maybe<T> {
-  return (a instanceof Either
-    ? a.caseOf({
-      left: () => Maybe.nothing(),
-      right: Maybe.just,
-    })
-    : Maybe.nothing()
-  )
+  return isSuccess(a) ? Maybe.just(a[1]) : Maybe.nothing()
 }
 
 export interface WebDataCasePatterns<A, B> {
@@ -58,9 +51,8 @@ export function caseWebDataOf<A, B>(a: WebData<A>, pattern: WebDataCasePatterns<
     ? pattern.notAsked()
     : isLoading(a)
     ? pattern.loading()
-    : a.caseOf({
-      left: pattern.failure,
-      right: pattern.success,
-    })
+    : isSuccess(a)
+    ? pattern.success(a[1])
+    : pattern.failure(a[1])
   )
 }

@@ -1,7 +1,7 @@
 import { exec } from '../lib/api'
 import { Either } from 'tsmonad'
 import BigNumber from 'bignumber.js'
-import { WebData, successOf } from '../lib/webdata'
+import { WebData, Success, Failure } from '../lib/webdata'
 
 export type InfoState = WebData<InfoType>
 
@@ -13,8 +13,8 @@ export interface InfoType {
 
 export async function fetchInfo(): Promise<InfoState> {
   try {
-    return Either.right(await exec<InfoType>('GET', `/v2.1.0/info`))
+    return Success(await exec<InfoType>('GET', `/v2.1.0/info`))
   } catch (e) {
-    return Either.left(e.message)
+    return Failure(e.message)
   }
 }

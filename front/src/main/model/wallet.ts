@@ -1,6 +1,7 @@
+import { Buffer } from 'buffer'
 import { Maybe } from 'tsmonad'
 import semux from 'semux'
-import { encrypt, decrypt } from '../lib/aes'
+import { encrypt, decrypt, randomIv, randomSalt } from '../lib/aes'
 import { Password } from '../lib/password'
 import { hexBytes } from '../lib/utils'
 import Key from 'semux/dist/types/lib/Key'
@@ -65,17 +66,29 @@ function throwIf(cond: boolean, msg: string) {
   }
 }
 
-export function createNewWallet(password: Password, network: string): Wallet {
-  const newKey = semux.Key.generateKeyPair()
-  const { salt, iv, encryptedPrivKey } = encrypt({ password, key: newKey })
+function semuxKeyFromHex(privKeyHex: string): Key {
+  const privKey = new Uint8Array(Buffer.from(privKeyHex.replace('0x', ''), 'hex'))
+  return semux.Key.importEncodedPrivateKey(privKey)
+}
+
+export function createNewWallet(password: Password, network: string, privKeysHex: string[]): Wallet {
+  const salt = randomSalt()
+  const iv = randomIv()
+  const privKeys = privKeysHex.length > 0
+    ? privKeysHex.map(semuxKeyFromHex)
+    : [ semux.Key.generateKeyPair() ]
+
   const newWallet: Wallet = {
     version: 1,
     network,
     cipher: { salt, iv },
-    accounts: [{
-      address: `0x${newKey.toAddressHexString()}`,
-      encrypted: encryptedPrivKey,
-    }],
+    accounts: privKeys.map((key) => {
+      const { encryptedPrivKey } = encrypt({ salt, iv, password, key })
+      return {
+        address: `0x${key.toAddressHexString()}`,
+        encrypted: encryptedPrivKey,
+      }
+    }),
   }
   return newWallet
 }

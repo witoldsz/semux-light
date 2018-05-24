@@ -17,10 +17,15 @@ export interface WelcomeState {
   walletFile: any
 }
 
-enum Action {
-  Load = 'load',
-  CreateNew = 'create_new',
-  ImportKey = 'import',
+type Action = 'Load' | ['CreateNew', boolean]
+function isLoad(a: Action | undefined): a is 'Load' {
+  return a === 'Load'
+}
+function isCreateNew(a: Action | undefined): a is ['CreateNew', boolean] {
+  return !!a && a[0] === 'CreateNew'
+}
+function isCreateNewImport(a: Action | undefined) {
+  return isCreateNew(a) && a[1]
 }
 
 export const initialWelcomeState: WelcomeState = {
@@ -36,7 +41,7 @@ export interface WelcomeActions {
   setError: (_: any) => (s: WelcomeState) => WelcomeState
   setWalletFileBody: (body: Either<string, any>) => (s: WelcomeState) => WelcomeState
   load: (_: [Password, State, Actions]) => (s: WelcomeState, a: WelcomeActions) => WelcomeState
-  create: (_: [Password, Password, State, Actions]) => (s: WelcomeState) => WelcomeState
+  create: (_: [Password, Password, State, Actions, string[]]) => (s: WelcomeState) => WelcomeState
 }
 
 export const rawWelcomeActions: WelcomeActions = {
@@ -68,7 +73,7 @@ export const rawWelcomeActions: WelcomeActions = {
     }
   },
 
-  create: ([password, password2, rootState, rootActions]) => (state) => {
+  create: ([password, password2, rootState, rootActions, privateKeys]) => (state) => {
     if (!password.equals(password2)) {
       return { ...state, createMessage: 'Passwords does not match' }
     }
@@ -76,11 +81,10 @@ export const rawWelcomeActions: WelcomeActions = {
       return { ...state, createMessage: 'Password cannot be empty' }
     }
     successOf(rootState.info).fmap((info) => {
-      const wallet = createNewWallet(password, info.network)
+      const wallet = createNewWallet(password, info.network, privateKeys)
       rootActions.setWallet({ ...wallet, password })
       saveJsonFile('semux-wallet.json', wallet)
     })
-
     return initialWelcomeState
   },
 }
@@ -88,24 +92,26 @@ export const rawWelcomeActions: WelcomeActions = {
 export const WelcomeView = () => (rootState: State, rootActions: Actions) => {
   const state = rootState.welcome
   const actions = rootActions.welcome
+
   return <div class="pa3">
     <h1>Welcome to the Semux Light!</h1>
     {state.errorMessage && <p class="dark-red">{state.errorMessage}</p>}
+
     <div class="mv2">
       <label>
         <input
           type="radio"
           name="welcome"
-          checked={state.action === Action.Load}
+          checked={isLoad(state.action)}
           onclick={() => {
-            actions.setAction(Action.Load)
+            actions.setAction('Load')
             document.getElementById('load')!.click()
           }}
-        />{' '}
-        Load wallet from file
+        />
+        {' '}Load wallet from file
       </label>
-      <div class="clip">
-        <input
+      <input
+          class="clip"
           type="file"
           id="load"
           onchange={(evt) => readInputFile(evt.target)
@@ -113,30 +119,22 @@ export const WelcomeView = () => (rootState: State, rootActions: Actions) => {
             .catch((err) => actions.setWalletFileBody(Either.left(err.message)))
           }
         />
-      </div>
     </div>
+
     <div class="mv2">
       <label>
         <input
           type="radio"
           name="welcome"
-          checked={state.action === Action.CreateNew}
-          onclick={() => actions.setAction(Action.CreateNew)}
-        />{' '}
-        Create new wallet
-    </label>
+          checked={isCreateNew(state.action)}
+          onclick={() => {
+            actions.setAction(['CreateNew', false])
+          }}
+        />
+        {' '}Create new wallet file
+      </label>
     </div>
-    <div class="mv2">
-      <label>
-        <input
-          type="radio"
-          name="welcome"
-          checked={state.action === Action.ImportKey}
-          onclick={() => actions.setAction(Action.ImportKey)}
-        />{' '}
-        Import key into new wallet (TODO)
-    </label>
-    </div>
+
     <div class="mv3">
       <label class="fw7 f6">
         Password
@@ -146,11 +144,11 @@ export const WelcomeView = () => (rootState: State, rootActions: Actions) => {
           type="password"
           autocomplete="off"
           class="db pa2 br2 b--black-20 ba f6"
-          oninput={(evt) => { }}
         />
       </label>
     </div>
-    {state.action === Action.Load &&
+
+    {isLoad(state.action) &&
       <div>
         <button onclick={() => actions.load([passwordById('password'), rootState, rootActions])}>
           Load wallet
@@ -158,7 +156,8 @@ export const WelcomeView = () => (rootState: State, rootActions: Actions) => {
         <span class="ml2 dark-red">{state.loadMessage}</span>
       </div>
     }
-    {state.action === Action.CreateNew &&
+
+    {isCreateNew(state.action) &&
       <div>
         <div class="mv3">
           <label class="fw7 f6">
@@ -169,10 +168,33 @@ export const WelcomeView = () => (rootState: State, rootActions: Actions) => {
               type="password"
               autocomplete="off"
               class="db pa2 br2 b--black-20 ba f6"
-              oninput={(evt) => { }}
             />
           </label>
         </div>
+
+        <div class="mv3">
+          <label class="fw7 f6">
+            <input
+              type="checkbox"
+              name="import"
+              checked={isCreateNewImport(state.action)}
+              onclick={() => {actions.setAction(['CreateNew', !isCreateNewImport(state.action)])}}
+            />
+            {' '}Import keys
+          </label>
+        </div>
+        {isCreateNewImport(state.action) &&
+          <div class="mv3">
+            <label class="fw7 f6">
+              Private keys
+              <br/>
+              <textarea
+                class="w-100"
+                id="privateKeys"
+              />
+            </label>
+          </div>
+        }
 
         <div>
           <button onclick={() => actions.create([
@@ -180,8 +202,9 @@ export const WelcomeView = () => (rootState: State, rootActions: Actions) => {
             passwordById('password2'),
             rootState,
             rootActions,
+            privateKeysOfTextarea('privateKeys'),
           ])}>
-            Create and save!
+            Create new wallet and save the file!
           </button><span class="ml2 dark-red">{state.createMessage}</span>
         </div>
       </div>
@@ -191,4 +214,9 @@ export const WelcomeView = () => (rootState: State, rootActions: Actions) => {
 
 function passwordById(id: string): Password {
   return new Password((document.getElementById(id) as HTMLInputElement).value)
+}
+
+function privateKeysOfTextarea(id: string): string[] {
+  const elem = document.getElementById(id) as HTMLTextAreaElement
+  return elem ? elem.value.split(/\s/).map((e) => e.trim()).filter((e) => e) : []
 }

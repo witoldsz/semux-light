@@ -4,7 +4,7 @@
 This is alpha stage, beta version comming soon.
 
 ---
- 
+
 ![semux-light](https://github.com/witoldsz/semux-light/raw/assets/semux-light-testnet.png)
 
 ## Try it yourself:
@@ -28,7 +28,7 @@ This is alpha stage, beta version comming soon.
   api.password = 123456
 
   ```
-- launch Semux (my advice: always use separate installation for testnet only)
+- launch Semux 1.2.0, requires API 2.1.x or newer (my advice: always use separate installation for testnet only)
   - semux-testnet/semux-cli.sh --network testnet
   - or
   - semux-testnet/semux-gui.sh --network testnet

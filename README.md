@@ -4,8 +4,8 @@
 This is alpha stage, beta version comming soon.
 
 ---
-
-![semux-light](https://raw.githubusercontent.com/witoldsz/semux-light/7019f3c572bca200ac18d8b8fd395f5fce93a340/semux-light-testnet-2018-05-02T10-42-44.png)
+ 
+![semux-light](https://github.com/witoldsz/semux-light/raw/assets/semux-light-testnet.png)
 
 ## Try it yourself:
 
@@ -56,4 +56,4 @@ This is alpha stage, beta version comming soon.
 
     ```
 
-- open browser location: http://localhost:3333/#/home?addr=SEM_ADDR1,SEM_ADDR2,…,n
+- open browser location: http://localhost:3333/#/home

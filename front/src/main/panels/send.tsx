@@ -2,7 +2,7 @@ import { h } from 'hyperapp'
 import { Buffer } from 'buffer'
 import BigNumber from 'bignumber.js'
 import { State, Actions } from '../app'
-import { WebData, isLoading, successOf, NotAsked, Failure, failureOf, isFailure } from '../lib/webdata'
+import { WebData, isLoading, successOf, NotAsked, Failure, failureOf, isFailure, Loading } from '../lib/webdata'
 import semux from 'semux'
 import * as Long from 'long'
 import { hexBytes, log } from '../lib/utils'
@@ -29,7 +29,7 @@ export const initialSendState: SendState = {
   to: '',
   amount: Long.ZERO,
   data: '',
-  submit: 'NotAsked',
+  submit: NotAsked,
 }
 
 export interface SendActions {
@@ -67,15 +67,6 @@ export const rawSendActions: SendActions = {
   }),
 
   data: (data) => (state) => ({ ...state, data }),
-  // privateKey: (privateKey) => (state) => {
-  //   try {
-  //     const key = semux.Key.importEncodedPrivateKey(hexBytes(privateKey))
-  //     const from = key ? `0x${key.toAddressHexString()}` : ''
-  //     return { ...state, privateKey, from }
-  //   } catch (err) {
-  //     return { ...state, privateKey, from: '' }
-  //   }
-  // },
 
   submit: (rootState) => (state, actions) => {
     const key = getKey(rootState.wallet, state.selectedAccountIdx)
@@ -97,7 +88,7 @@ export const rawSendActions: SendActions = {
 
     return {
       ...state,
-      submit: 'Loading',
+      submit: Loading,
     }
   },
   submitResponse: (response) => (state) => {

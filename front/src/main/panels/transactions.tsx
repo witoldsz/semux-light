@@ -1,5 +1,7 @@
 import { h } from 'hyperapp'
-import { WebData, isNotAsked, caseWebDataOf, Loading, Success, Failure, isSuccess, successOf } from '../lib/webdata'
+import {
+  WebData, isNotAsked, caseWebDataOf, Loading, Success, Failure, isSuccess, successOf, NotAsked,
+} from '../lib/webdata'
 import { State, Actions } from '../app'
 import { TransactionType } from '../model/transaction'
 import { Either } from 'tsmonad'
@@ -28,7 +30,7 @@ function blankPage(address: string): Page {
     address,
     from: 0,
     to: LIST_SIZE,
-    transactions: 'NotAsked',
+    transactions: NotAsked,
   }
 }
 
@@ -132,7 +134,7 @@ export function TransactionsView(rootState: State, rootActions: Actions) {
 }
 
 function table(page: Page, rows: TransactionType[]) {
-  return <div class="overflow-auto">
+  return <div class="">
       <table class="f6 mw8" cellspacing="0">
         <thead>
           <tr>

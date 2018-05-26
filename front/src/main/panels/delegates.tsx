@@ -97,7 +97,7 @@ export function DelegatesView(rootState: State, rootActions: Actions) {
 }
 
 function table(state: DelegatesState) {
-  return <div class="overflow-auto">
+  return <div class="">
     <table class="f6 mw8" cellspacing="0">
       <thead>
         <tr>

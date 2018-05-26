@@ -20,7 +20,8 @@ import { ZERO } from './lib/utils'
 import { WelcomeView, WelcomeState, initialWelcomeState, WelcomeActions, rawWelcomeActions } from './panels/welcome'
 import { WalletState } from './model/wallet'
 import { InfoType, InfoState, fetchInfo } from './model/info'
-import { successOf, isSuccess, isFailure, failureOf } from './lib/webdata'
+import { successOf, isSuccess, isFailure, failureOf, isLoading, NotAsked } from './lib/webdata'
+import { ReceiveView, initialReceiveState, ReceiveState, ReceiveActions, rawReceiveActions } from './panels/receive'
 
 export interface State {
   location: LocationState
@@ -30,18 +31,20 @@ export interface State {
   welcome: WelcomeState
   home: HomeState
   send: SendState
+  receive: ReceiveState
   transactions: TxsState
   delegates: DelegatesState
 }
 
 const initialState: State = {
   location: initialLocationState,
-  info: 'NotAsked',
+  info: NotAsked,
   wallet: undefined,
   /* panels: */
   welcome: initialWelcomeState,
   home: initialHomeState,
   send: initialSendState,
+  receive: initialReceiveState,
   transactions: initialTxsState,
   delegates: blankDelegates,
 }
@@ -54,6 +57,7 @@ export interface Actions {
   location: LocationActions
   home: HomeActions
   send: SendActions
+  receive: ReceiveActions
   transactions: TxsActions
   delegates: DelegatesActions
 }
@@ -66,6 +70,7 @@ const rawActions: Actions = {
   location: rawLocationActions,
   home: rawHomeActions,
   send: rawSendActions,
+  receive: rawReceiveActions,
   transactions: rawTxsActions,
   delegates: rawDelegatesActions,
 }
@@ -78,12 +83,9 @@ const view = (state: State, actions: Actions) => (
         .valueOr('')
       }
     </p>
-    {isFailure(state.info)
-      ?
-      <p class="pa2 dark-red">{failureOf(state.info)}</p>
-      :
-      isSuccess(state.info)
-      ?
+    <p class="pa2 dark-red">{failureOf(state.info)}</p>
+    {isLoading(state.info) && <p class="tc pa3">Please wait</p>}
+    {isSuccess(state.info) &&
       !state.wallet
         ? <WelcomeView />
         :
@@ -92,15 +94,16 @@ const view = (state: State, actions: Actions) => (
           <NavView />
           <Route path={Nav.Home} render={HomeView} />
           <Route path={Nav.Send} render={SendView} />
+          <Route path={Nav.Receive} render={ReceiveView} />
           <Route path={Nav.Transactions} render={TransactionsView} />
           <Route path={Nav.Delegates} render={DelegatesView} />
         </div>
-      :
-      <p class="tc pa3">Please wait</p>
     }
+    {/*
     <hr />
     <p>debug:</p>
     <pre> {JSON.stringify(state, null, 4)}</pre>
+    */}
   </div>
 )
 

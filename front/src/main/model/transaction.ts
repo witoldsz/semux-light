@@ -1,16 +1,26 @@
-import * as Long from 'long'
-import { Either } from 'tsmonad'
 import BigNumber from 'bignumber.js'
+import { Buffer } from 'buffer'
+import * as Long from 'long'
+import Transaction from 'semux/dist/types/lib/Transaction'
 import { exec } from '../lib/api'
 import { mutableReverse } from '../lib/utils'
-import Transaction from 'semux/dist/types/lib/Transaction'
-import { Buffer } from 'buffer'
 import { AccountType } from './account'
 
 export interface TransactionTypeRemote {
   blockNumber: string
   hash: string
-  type: string
+  type: 'COINBASE' | 'TRANSFER' | 'DELEGATE' | 'VOTE' | 'UNVOTE' | 'CREATE' | 'CALL'
+  from: string
+  to: string
+  value: string
+  fee: string
+  nonce: string
+  timestamp: string
+  data: string
+}
+export interface PendingTransactionTypeRemote {
+  hash: string
+  type: 'COINBASE' | 'TRANSFER' | 'DELEGATE' | 'VOTE' | 'UNVOTE' | 'CREATE' | 'CALL'
   from: string
   to: string
   value: string
@@ -21,9 +31,9 @@ export interface TransactionTypeRemote {
 }
 
 export interface TransactionType {
-  blockNumber: string
+  blockNumber: string | undefined
   hash: string
-  type: string
+  type: 'COINBASE' | 'TRANSFER' | 'DELEGATE' | 'VOTE' | 'UNVOTE' | 'CREATE' | 'CALL'
   from: string
   to: string
   value: BigNumber
@@ -76,4 +86,21 @@ export async function fetchLastTxs(account: AccountType, { page, size }: { page:
   return from >= 0 && to > from
     ? fetchTxs(account.address, from, to)
     : []
+}
+
+export async function fetchPendingTxs(address: string): Promise<TransactionType[]> {
+  const path = `/v2.1.0/account/pending-transactions?address=${address}&from=0&to=999`
+  const remotes = await exec<PendingTransactionTypeRemote[]>('GET', path)
+  return mutableReverse(remotes.map((r, idx) => ({
+    blockNumber: undefined,
+    hash: r.hash,
+    type: r.type,
+    from: r.from,
+    to: r.to,
+    value: new BigNumber(r.value).div(1e9),
+    fee: new BigNumber(r.fee).div(1e9),
+    nonce: Long.fromString(r.nonce),
+    timestamp: new Date(parseInt(r.timestamp, 10)),
+    data: r.data,
+  })))
 }

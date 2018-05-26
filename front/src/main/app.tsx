@@ -1,27 +1,19 @@
-import * as Long from 'long'
-import { h, app } from 'hyperapp'
-import { NavView, Nav } from './nav'
-import { HomeView, HomeState, initialHomeState, HomeActions, rawHomeActions } from './panels/home'
+import { app, h } from 'hyperapp'
 import {
-  Route, initialLocationState, LocationActions, rawLocationActions, locationSubscribe,
+  LocationActions, LocationState, Route, initialLocationState, locationSubscribe, rawLocationActions,
 } from './lib/location'
-import { LocationState } from './lib/location'
-import BigNumber from 'bignumber.js'
-import { Maybe, maybe } from 'tsmonad'
-import {
-  TransactionsView, TxsState, initialTxsState, TxsActions,
-  rawTxsActions,
-} from './panels/transactions'
-import {
-  DelegatesView, DelegatesState, blankDelegates, DelegatesActions, rawDelegatesActions,
-} from './panels/delegates'
-import { SendView, SendState, initialSendState, SendActions, rawSendActions } from './panels/send'
-import { ZERO } from './lib/utils'
-import { WelcomeView, WelcomeState, initialWelcomeState, WelcomeActions, rawWelcomeActions } from './panels/welcome'
+import { NotAsked, failureOf, isLoading, isSuccess, successOf } from './lib/webdata'
+import { InfoState, fetchInfo } from './model/info'
 import { WalletState } from './model/wallet'
-import { InfoType, InfoState, fetchInfo } from './model/info'
-import { successOf, isSuccess, isFailure, failureOf, isLoading, NotAsked } from './lib/webdata'
-import { ReceiveView, initialReceiveState, ReceiveState, ReceiveActions, rawReceiveActions } from './panels/receive'
+import { Nav, NavView } from './nav'
+import {
+  DelegatesActions, DelegatesState, DelegatesView, blankDelegates, rawDelegatesActions,
+} from './panels/delegates'
+import { HomeActions, HomeState, HomeView, initialHomeState, rawHomeActions } from './panels/home'
+import { ReceiveActions, ReceiveState, ReceiveView, initialReceiveState, rawReceiveActions } from './panels/receive'
+import { SendActions, SendState, SendView, initialSendState, rawSendActions } from './panels/send'
+import { TransactionsView, TxsActions, TxsState, initialTxsState, rawTxsActions } from './panels/transactions'
+import { WelcomeActions, WelcomeState, WelcomeView, initialWelcomeState, rawWelcomeActions } from './panels/welcome'
 
 export interface State {
   location: LocationState

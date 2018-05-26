@@ -20,6 +20,7 @@ async function main() {
   app.get('/v2.1.0/info', proxyMiddleware)
   app.get('/v2.1.0/account', proxyMiddleware)
   app.get('/v2.1.0/account/transactions', proxyMiddleware)
+  app.get('/v2.1.0/account/pending-transactions', proxyMiddleware)
   app.get('/v2.1.0/account/votes', proxyMiddleware)
   app.get('/v2.1.0/delegates', proxyMiddleware)
   app.get('/v2.1.0/latest-block', proxyMiddleware)

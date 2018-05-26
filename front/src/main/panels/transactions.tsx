@@ -1,21 +1,17 @@
 import { h } from 'hyperapp'
-import {
-  WebData, isNotAsked, caseWebDataOf, Loading, Success, Failure, isSuccess, successOf, NotAsked,
-} from '../lib/webdata'
-import { State, Actions } from '../app'
-import { TransactionType } from '../model/transaction'
-import { Either } from 'tsmonad'
-import { fetchTxs } from '../model/transaction'
-import { log } from '../lib/utils'
-import { Nav } from '../nav'
-import { transfer, sem } from '../lib/format'
-import { addresses, address1st } from '../model/wallet'
+import { Actions, State } from '../app'
+import { sem, transfer } from '../lib/format'
+import { Failure, Loading, NotAsked, Success, WebData, caseWebDataOf, isSuccess, successOf } from '../lib/webdata'
+import { TransactionType, fetchTxs } from '../model/transaction'
+import { address1st, addresses } from '../model/wallet'
 
 const LIST_SIZE = 100
+const FETCH_INTERVAL = 20000
 
 export interface TxsState {
   selectedAddress: string
   pages: { [index: string]: Page }
+  fetchTimeoutId: number | undefined
 }
 
 interface Page {
@@ -37,6 +33,7 @@ function blankPage(address: string): Page {
 export const initialTxsState: TxsState = {
   selectedAddress: '',
   pages: {},
+  fetchTimeoutId: undefined,
 }
 
 function pageOf(state: TxsState, address: string) {
@@ -46,15 +43,13 @@ function pageOf(state: TxsState, address: string) {
 export interface TxsActions {
   fetch: (a: { rootState: State, newAddress?: string })
     => (state: TxsState, actions: TxsActions) => TxsState
+  cancelNextFetch: () => (s: TxsState) => TxsState
   fetchResult: (a: { page: Page, result: WebData<TransactionType[]> })
     => (state: TxsState) => TxsState
 }
 
 export const rawTxsActions: TxsActions = {
   fetch: ({ rootState, newAddress }) => (state, actions) => {
-    if (rootState.location.route !== Nav.Transactions) {
-      return state
-    }
     const address = newAddress || state.selectedAddress || address1st(rootState.wallet)
     if (!address) {
       return state
@@ -70,17 +65,26 @@ export const rawTxsActions: TxsActions = {
         result: Failure(error.message),
       }))
 
+    clearTimeout(state.fetchTimeoutId)
+    const fetchTimeoutId = setTimeout(() => actions.fetch({ rootState }), FETCH_INTERVAL)
     return {
       selectedAddress: address,
+      fetchTimeoutId,
       pages: {
         ...state.pages,
         [page.address]: {
           ...page,
-          transactions: isNotAsked(page.transactions) ? Loading : page.transactions,
+          transactions: isSuccess(page.transactions) ? page.transactions : Loading,
         },
       },
     }
   },
+
+  cancelNextFetch: () => (state) => {
+    clearTimeout(state.fetchTimeoutId)
+    return { ...state, fetchTimeoutId: undefined}
+  },
+
   fetchResult: ({ page, result }) => (state) => {
     return {
       ...state,
@@ -102,7 +106,12 @@ export function TransactionsView(rootState: State, rootActions: Actions) {
   const state = rootState.transactions
   const actions = rootActions.transactions
   const page = pageOf(state, state.selectedAddress)
-  return <div class="pa2">
+  return <div
+    class="pa2"
+    key="TransactionsView"
+    oncreate={() => actions.fetch({ rootState })}
+    ondestroy={() => actions.cancelNextFetch()}
+  >
     <div class="mv3 dib">
       <label class="fw7 f6" for="exampleInputName1">Address:</label>{' '}
       <select

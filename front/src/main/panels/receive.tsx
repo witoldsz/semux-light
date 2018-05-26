@@ -5,7 +5,7 @@ import { addresses } from '../model/wallet'
 import {
   WebData, Success, Failure, NotAsked, Loading, isFailure, failureOf, isLoading, isSuccess, successOf, caseWebDataOf,
 } from '../lib/webdata'
-import { sem } from '../lib/format'
+import { semNoLabel } from '../lib/format'
 
 export interface ReceiveState {
   accounts: WebData<AccountType[]>
@@ -60,6 +60,7 @@ function table(accounts: AccountType[]) {
           <th class="fw6 bb b--black-20 tl pb1 pr2 pl2">Address</th>
           <th class="fw6 bb b--black-20 tl pb1 pr2 pl2 tr">Available</th>
           <th class="fw6 bb b--black-20 tl pb1 pr2 pl2 tr">Locked</th>
+          <th class="fw6 bb b--black-20 tl pb1 pr2 pl2 tr">Total</th>
         </tr>
       </thead>
       <tbody class="lh-copy">
@@ -68,8 +69,9 @@ function table(accounts: AccountType[]) {
             <tr class="hover-bg-washed-blue">
               <td class="pv1 pr2 pl2 bb bl b--black-20">{i}</td>
               <td class="pv1 pr2 pl2 bb bl b--black-20">{account.address}</td>
-              <td class="pv1 pr2 pl2 bb bl b--black-20 tr">{sem(account.available)}</td>
-              <td class="pv1 pr2 pl2 bb bl br b--black-20 tr">{sem(account.locked)}</td>
+              <td class="pv1 pr2 pl2 bb bl b--black-20 tr">{semNoLabel(account.available)}</td>
+              <td class="pv1 pr2 pl2 bb bl br b--black-20 tr">{semNoLabel(account.locked)}</td>
+              <td class="pv1 pr2 pl2 bb bl br b--black-20 tr">{semNoLabel(account.available.plus(account.locked))}</td>
             </tr>
           ))
         }

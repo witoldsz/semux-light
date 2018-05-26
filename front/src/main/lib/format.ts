@@ -11,8 +11,12 @@ export function transfer(a1: string, a2: string) {
   return `${addressAbbr(a1)} → ${addressAbbr(a2)}`
 }
 
-export function sem(amount: BigNumber, showLabel = true): string {
-  return amount.toFormat() + (showLabel ? ' SEM' : '')
+export function sem(amount: BigNumber): string {
+  return `${semNoLabel(amount)} SEM`
+}
+
+export function semNoLabel(amount: BigNumber): string {
+  return amount.toFormat()
 }
 
 export function localeDateTime(d: Date) {

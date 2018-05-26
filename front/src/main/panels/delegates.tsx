@@ -2,7 +2,7 @@ import { h } from 'hyperapp'
 import { DelegateType, fetchDelegates } from '../model/delegate'
 import { fetchVotes, AccountVoteType } from '../model/vote'
 import { State, Actions } from '../app'
-import { addressAbbr, sem } from '../lib/format'
+import { addressAbbr, semNoLabel } from '../lib/format'
 import BigNumber from 'bignumber.js'
 import { ZERO } from '../lib/utils'
 import { Either } from 'tsmonad'
@@ -117,9 +117,9 @@ function table(state: DelegatesState) {
               <td class="pv1 pr2 pl2 bb bl b--black-20">{i}</td>
               <td class="pv1 pr2 pl2 bb bl b--black-20">{d.name}</td>
               <td class="pv1 pr2 pl2 bb bl b--black-20">{addressAbbr(d.address)}</td>
-              <td class="pv1 pr2 pl2 bb bl b--black-20 tr">{sem(d.votes, false)}</td>
+              <td class="pv1 pr2 pl2 bb bl b--black-20 tr">{semNoLabel(d.votes)}</td>
               <td class="pv1 pr2 pl2 bb bl b--black-20 tr">
-                {sem(myVotesForDelegate(state, d.address), false)}
+                {semNoLabel(myVotesForDelegate(state, d.address))}
               </td>
               <td class="pv1 pr2 pl2 bb bl b--black-20">
                 {d.validator ? 'Validator' : 'Delegate'}

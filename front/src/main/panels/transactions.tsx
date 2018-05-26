@@ -1,6 +1,6 @@
 import { h } from 'hyperapp'
 import { Actions, State } from '../app'
-import { sem, transfer } from '../lib/format'
+import { semNoLabel, transfer } from '../lib/format'
 import { Failure, Loading, NotAsked, Success, WebData, caseWebDataOf, isSuccess, successOf } from '../lib/webdata'
 import { TransactionType, fetchPendingTxs, fetchTxs } from '../model/transaction'
 import { address1st, addresses } from '../model/wallet'
@@ -172,7 +172,7 @@ function tableRow(tx: TransactionType, status: string, ordinal: number) {
     <td class="pv1 pl2 pr2 bb bl b--black-20">
       {transfer(tx.from, tx.to)}
     </td>
-    <td class="pv1 pl2 pr2 bb bl b--black-20 tr">{sem(tx.value, false)}</td>
+    <td class="pv1 pl2 pr2 bb bl b--black-20 tr">{semNoLabel(tx.value)}</td>
     <td class="pv1 pl2 pr2 bb bl b--black-20">{tx.timestamp.toLocaleString()}</td>
     <td class="pv1 pl2 pr2 bb bl br b--black-20">{status}</td>
   </tr>

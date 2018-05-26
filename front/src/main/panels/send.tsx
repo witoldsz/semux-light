@@ -2,7 +2,9 @@ import { h } from 'hyperapp'
 import { Buffer } from 'buffer'
 import BigNumber from 'bignumber.js'
 import { State, Actions } from '../app'
-import { WebData, isLoading, successOf, NotAsked, Failure, failureOf, isFailure, Loading } from '../lib/webdata'
+import {
+  WebData, NotAsked, Success, Failure, isSuccess, Loading, successOf, caseWebDataOf, failureOf, isLoading,
+} from '../lib/webdata'
 import semux from 'semux'
 import * as Long from 'long'
 import { hexBytes, log } from '../lib/utils'
@@ -13,18 +15,16 @@ import { accounts, Account, addresses, getKey } from '../model/wallet'
 import { sem } from '../lib/format'
 
 export interface SendState {
-  fetchAccountsError: string
-  accounts: AccountType[]
+  accounts: WebData<AccountType[]>
   selectedAccountIdx: number
   to: string
   amount: Long
   data: string
-  submit: WebData<any>
+  submit: WebData<{}>
 }
 
 export const initialSendState: SendState = {
-  fetchAccountsError: '',
-  accounts: [],
+  accounts: NotAsked,
   selectedAccountIdx: 0,
   to: '',
   amount: Long.ZERO,
@@ -33,30 +33,29 @@ export const initialSendState: SendState = {
 }
 
 export interface SendActions {
-  fetchAccounts: (s: State) => (s: SendState, a: SendActions) => void
-  fetchAccountsResponse: (as: Either<string, AccountType[]>) => (s: SendState) => SendState
+  fetchAccounts: (s: State) => (s: SendState, a: SendActions) => SendState
+  fetchAccountsResponse: (as: WebData<AccountType[]>) => (s: SendState) => SendState
   from: (val: number) => (s: SendState) => SendState
   to: (val: string) => (s: SendState) => SendState
   amount: (val: string) => (s: SendState) => SendState
   data: (val: string) => (s: SendState) => SendState
   submit: (s: State) => (s: SendState, a: SendActions) => SendState
-  submitResponse: (r: WebData<undefined>) => (s: SendState) => SendState
+  submitResponse: (r: WebData<{}>) => (s: SendState) => SendState
 }
 
 export const rawSendActions: SendActions = {
 
   fetchAccounts: (rootState) => (state, actions) => {
     Promise.all(addresses(rootState.wallet).map(fetchAccount))
-      .then((accounts) => actions.fetchAccountsResponse(Either.right(accounts)))
-      .catch((err) => actions.fetchAccountsResponse(Either.left(err.message)))
+      .then((accounts) => actions.fetchAccountsResponse(Success(accounts)))
+      .catch((err) => actions.fetchAccountsResponse(Failure(err.message)))
+    return {
+      ...state,
+      accounts: isSuccess(state.accounts) ? state.accounts : Loading,
+    }
   },
 
-  fetchAccountsResponse: (accountsE) => (state) => {
-    return accountsE.caseOf({
-      left: (message) => ({ ...state, fetchAccountsError: message }),
-      right: (accounts) => ({ ...state, accounts }),
-    })
-  },
+  fetchAccountsResponse: (accounts) => (state) => ({ ...state, accounts }),
 
   from: (idx) => (state) => ({ ...state, selectedAccountIdx: idx }),
 
@@ -99,14 +98,23 @@ export const rawSendActions: SendActions = {
 export function SendView(rootState: State, rootActions: Actions) {
   const actions = rootActions.send
   const state = rootState.send
-  const inProgress = isLoading(state.submit)
+
   return <div
     class="pa2"
     key="SendView"
     oncreate={() => actions.fetchAccounts(rootState)}
   >
-    <form>
+    {caseWebDataOf(state.accounts, {
+      notAsked: () => <p/>,
+      loading: () => <p>Please wait, loading accounts…</p>,
+      failure: (message) => <p class="pa2 dark-red">{message}</p>,
+      success: sendForm,
+    })}
+  </div>
 
+  function sendForm(accounts: AccountType[]) {
+    const inProgress = isLoading(state.submit)
+    return <form>
       <div class="mv3">
         <label class="fw7 f6">
           From
@@ -116,8 +124,8 @@ export function SendView(rootState: State, rootActions: Actions) {
             onchange={(e) => { actions.from(parseInt(e.target.value, 10)) }}
           >
             {
-              state.accounts.map((acc, idx) => (
-                <option selected={state.accounts.indexOf(acc) === state.selectedAccountIdx} value={idx}>
+              accounts.map((acc, idx) => (
+                <option selected={accounts.indexOf(acc) === state.selectedAccountIdx} value={idx}>
                   {acc.address}, {sem(acc.available)}
                 </option>
               ))
@@ -169,5 +177,5 @@ export function SendView(rootState: State, rootActions: Actions) {
       {' '}
       {<span class="dark-red">{failureOf(state.submit)}</span>}
     </form>
-  </div>
+  }
 }

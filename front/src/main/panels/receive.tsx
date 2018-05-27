@@ -7,17 +7,23 @@ import {
 } from '../lib/webdata'
 import { semNoLabel } from '../lib/format'
 
+const FETCH_INTERVAL = 20000
+
 export interface ReceiveState {
   accounts: WebData<AccountType[]>
+  fetchTimeoutId: number | undefined
 }
 
 export const initialReceiveState: ReceiveState = {
   accounts: NotAsked,
+  fetchTimeoutId: undefined,
 }
 
 export interface ReceiveActions {
   fetch: (rs: State) => (s: ReceiveState, a: ReceiveActions) => ReceiveState
   fetchResult: (as: WebData<AccountType[]>) => (s: ReceiveState) => ReceiveState
+  cancelNextFetch: () => (s: ReceiveState) => ReceiveState
+
 }
 
 export const rawReceiveActions: ReceiveActions = {
@@ -26,12 +32,22 @@ export const rawReceiveActions: ReceiveActions = {
       .all(addresses(rootState.wallet).map(fetchAccount))
       .then((list) => actions.fetchResult(Success(list)))
       .catch((err) => actions.fetchResult(Failure(err.message)))
+
+    clearTimeout(state.fetchTimeoutId)
+    const fetchTimeoutId = setTimeout(() => actions.fetch(rootState), FETCH_INTERVAL)
     return {
       ...state,
+      fetchTimeoutId,
       accounts: isSuccess(state.accounts) ? state.accounts : Loading,
     }
   },
+
   fetchResult: (accounts) => (state) => ({ ...state, accounts }),
+
+  cancelNextFetch: () => (state) => {
+    clearTimeout(state.fetchTimeoutId)
+    return { ...state, fetchTimeoutId: undefined}
+  },
 }
 
 export function ReceiveView(rootState: State, rootActions: Actions) {
@@ -41,6 +57,7 @@ export function ReceiveView(rootState: State, rootActions: Actions) {
     class="pa2"
     key="ReceiveView"
     oncreate={() => actions.fetch(rootState)}
+    ondestroy={() => actions.cancelNextFetch()}
   >
     {caseWebDataOf(state.accounts, {
       notAsked: () => <p>Not loading…</p>,

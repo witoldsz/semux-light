@@ -77,7 +77,7 @@ const view = (state: State, actions: Actions) => (
     </p>
     <p class="pa2 dark-red">{failureOf(state.info)}</p>
     {isLoading(state.info) && <p class="tc pa3">Please wait</p>}
-    {isSuccess(state.info) &&
+    {isSuccess(state.info) && (
       !state.wallet
         ? <WelcomeView />
         :
@@ -90,7 +90,7 @@ const view = (state: State, actions: Actions) => (
           <Route path={Nav.Transactions} render={TransactionsView} />
           <Route path={Nav.Delegates} render={DelegatesView} />
         </div>
-    }
+    )}
     {/*
     <hr />
     <p>debug:</p>

@@ -15,6 +15,8 @@ import { publishTx } from '../model/transaction'
 import { AccountVoteType, fetchVotes } from '../model/vote'
 import { addresses, getKey } from '../model/wallet'
 
+const FETCH_INTERVAL = 20000
+
 interface RemoteDataResponse {
   accounts: AccountType[]
   myVotesArray: AccountVoteType[]
@@ -30,6 +32,7 @@ interface RemoteData {
 
 export interface DelegatesState {
   remoteData: WebData<RemoteData>
+  fetchTimeoutId: number | undefined
   selectedAccountIdx: number
   voteAmount: BigNumber | undefined
   selectedDelegate: string
@@ -38,6 +41,7 @@ export interface DelegatesState {
 
 export const blankDelegates: DelegatesState = {
   remoteData: NotAsked,
+  fetchTimeoutId: undefined,
   selectedAccountIdx: 0,
   voteAmount: undefined,
   selectedDelegate: '',
@@ -46,6 +50,7 @@ export const blankDelegates: DelegatesState = {
 
 export interface DelegatesActions {
   fetch: (rs: State) => (state: DelegatesState, actions: DelegatesActions) => DelegatesState
+  cancelNextFetch: () => (s: DelegatesState) => DelegatesState
   fetchResponse: (r: WebData<RemoteDataResponse>) => (state: DelegatesState) => DelegatesState
   selectedAccountIdx: (n: number) => (state: DelegatesState) => DelegatesState
   selectDelegate: (d: string) => (s: DelegatesState, a: DelegatesActions) => DelegatesState
@@ -69,7 +74,16 @@ export const rawDelegatesActions: DelegatesActions = {
       })))
       .catch((err) => actions.fetchResponse(Failure(err.message)))
 
-    return { ...state, remoteData: Loading }
+    return {
+      ...state,
+      fetchTimeoutId: setTimeout(() => actions.fetch(rootState), FETCH_INTERVAL),
+      remoteData: isSuccess(state.remoteData) ? state.remoteData : Loading,
+    }
+  },
+
+  cancelNextFetch: () => (state) => {
+    clearTimeout(state.fetchTimeoutId)
+    return { ...state, fetchTimeoutId: undefined}
   },
 
   fetchResponse: ((remoteDataResponse) => (state) => ({
@@ -131,7 +145,11 @@ export const rawDelegatesActions: DelegatesActions = {
 export function DelegatesView(rootState: State, rootActions: Actions) {
   const state = rootState.delegates
   const actions = rootActions.delegates
-  return <div class="pa2" oncreate={() => actions.fetch(rootState)}>
+  return <div
+    class="pa2"
+    oncreate={() => actions.fetch(rootState)}
+    ondestroy={() => actions.cancelNextFetch()}
+  >
     {caseWebDataOf(state.remoteData, {
       notAsked: () => <div />,
       loading: () => <div>Loading…</div>,
@@ -145,7 +163,7 @@ export function DelegatesView(rootState: State, rootActions: Actions) {
 }
 
 function voteForm(rootState: State, remoteData: RemoteData, state: DelegatesState, actions: DelegatesActions) {
-  const disabled = !state.selectedDelegate || isLoading(state.voteResult)
+  const disabled = !state.selectedDelegate || isLoading(state.voteResult) || isSuccess(state.voteResult)
   return <table class="mv3 dib lh-copy">
     <tr>
       <td class="tr"><label class="fw7 f6">Address:</label></td>

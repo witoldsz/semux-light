@@ -1,13 +1,19 @@
 import BigNumber from 'bignumber.js'
+import { Buffer } from 'buffer'
 import { h } from 'hyperapp'
+import * as Long from 'long'
+import semux from 'semux'
 import { Actions, State } from '../app'
 import { addressAbbr, sem, semNoLabel } from '../lib/format'
-import { ZERO, concat } from '../lib/utils'
-import { Failure, Loading, NotAsked, Success, WebData, caseWebDataOf, fmapSuccess } from '../lib/webdata'
+import { ZERO, concat, hexBytes } from '../lib/utils'
+import {
+  Failure, Loading, NotAsked, Success, WebData, caseWebDataOf, failureOf, fmapSuccess, isLoading, isSuccess, successOf,
+} from '../lib/webdata'
 import { AccountType, fetchAccount } from '../model/account'
 import { DelegateType, fetchDelegates } from '../model/delegate'
+import { publishTx } from '../model/transaction'
 import { AccountVoteType, fetchVotes } from '../model/vote'
-import { addresses } from '../model/wallet'
+import { addresses, getKey } from '../model/wallet'
 
 interface RemoteDataResponse {
   accounts: AccountType[]
@@ -44,7 +50,7 @@ export interface DelegatesActions {
   selectedAccountIdx: (n: number) => (state: DelegatesState) => DelegatesState
   selectDelegate: (d: string) => (s: DelegatesState, a: DelegatesActions) => DelegatesState
   voteAmount: (a: BigNumber | string) => (s: DelegatesState) => DelegatesState
-  vote: () => (s: DelegatesState, a: DelegatesActions) => DelegatesState
+  vote: (s: { rootState: State, type: 'VOTE' | 'UNVOTE' }) => (s: DelegatesState, a: DelegatesActions) => DelegatesState
   voteResult: (w: WebData<undefined>) => (s: DelegatesState, a: DelegatesActions) => DelegatesState
 }
 
@@ -87,12 +93,39 @@ export const rawDelegatesActions: DelegatesActions = {
 
   voteAmount: (val) => (state) => ({ ...state, voteAmount: val ? new BigNumber(val) : undefined }),
 
-  vote: () => (state, actions) => {
-    return { ...state, voteSubmit: Loading }
+  vote: ({ rootState, type }) => (state, actions) => {
+    const key = getKey(rootState.wallet, state.selectedAccountIdx)
+    const voteAmount = state.voteAmount ||
+      successOf(state.remoteData)
+        .fmap(({ accounts }) => accounts[state.selectedAccountIdx].available)
+        .valueOr(ZERO)
+
+    if (voteAmount.isPositive()) {
+      successOf(rootState.info).fmap((info) => {
+        fetchAccount(key.toAddressHexString())
+          .then((account) => publishTx(new semux.Transaction(
+            semux.Network[info.network],
+            semux.TransactionType[type],
+            hexBytes(state.selectedDelegate),
+            Long.fromString(voteAmount.times(1e9).toString()),
+            Long.fromString('5000000'),
+            Long.fromNumber(account.nonce),
+            Long.fromNumber(Date.now()),
+            Buffer.from(''),
+          ).sign(key)))
+          .then(() => actions.voteResult(Success(undefined)))
+          .catch((e) => actions.voteResult(Failure(e.message)))
+      })
+      return { ...state, voteSubmit: Loading }
+    } else {
+      return { ...state, voteSubmit: NotAsked }
+    }
   },
 
-  voteResult: (voteResult) => (state, actions) => ({ ...state, voteResult }),
-
+  voteResult: (voteResult) => (state, actions) => {
+    setTimeout(() => actions.voteResult(NotAsked), 4000)
+    return { ...state, voteResult }
+  },
 }
 
 export function DelegatesView(rootState: State, rootActions: Actions) {
@@ -100,10 +133,10 @@ export function DelegatesView(rootState: State, rootActions: Actions) {
   const actions = rootActions.delegates
   return <div class="pa2" oncreate={() => actions.fetch(rootState)}>
     {caseWebDataOf(state.remoteData, {
-      notAsked: () => <div/>,
+      notAsked: () => <div />,
       loading: () => <div>Loading…</div>,
       success: (remoteData) => <div>
-        {voteForm(remoteData, state, actions)}
+        {voteForm(rootState, remoteData, state, actions)}
         {table(remoteData, state, actions)}
       </div>,
       failure: (message) => <div class="dark-red">{message}</div>,
@@ -111,7 +144,8 @@ export function DelegatesView(rootState: State, rootActions: Actions) {
   </div>
 }
 
-function voteForm(remoteData: RemoteData, state: DelegatesState, actions: DelegatesActions) {
+function voteForm(rootState: State, remoteData: RemoteData, state: DelegatesState, actions: DelegatesActions) {
+  const disabled = !state.selectedDelegate || isLoading(state.voteResult)
   return <table class="mv3 dib lh-copy">
     <tr>
       <td class="tr"><label class="fw7 f6">Address:</label></td>
@@ -142,10 +176,23 @@ function voteForm(remoteData: RemoteData, state: DelegatesState, actions: Delega
           value={state.voteAmount ? state.voteAmount.toString() : undefined}
           oninput={(evt) => actions.voteAmount(evt.target.value)}
           placeholder={remoteData.accounts[state.selectedAccountIdx].available.toString()}
-          disabled={!state.selectedDelegate}
+          disabled={disabled}
         />
-        <button disabled={!state.selectedDelegate}>Vote</button>
-        <button disabled={!state.selectedDelegate}>Unvote</button></td>
+        <button
+          disabled={disabled}
+          onclick={() => actions.vote({ rootState, type: 'VOTE' })}
+        >
+          Vote
+        </button>
+        <button
+          disabled={disabled}
+          onclick={() => actions.vote({ rootState, type: 'UNVOTE' })}
+        >
+          Unvote
+        </button>
+        <span class="dark-red">{failureOf(state.voteResult)}</span>
+        <span class="green">{isSuccess(state.voteResult) ? 'OK' : ''}</span>
+      </td>
     </tr>
   </table>
 }

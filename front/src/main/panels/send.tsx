@@ -69,7 +69,7 @@ export const rawSendActions: SendActions = {
 
   submit: (rootState) => (state, actions) => {
     const key = getKey(rootState.wallet, state.selectedAccountIdx)
-    const network = successOf(rootState.info).fmap((info) => {
+    successOf(rootState.info).fmap((info) => {
       fetchAccount(key.toAddressHexString())
         .then((account) => publishTx(new semux.Transaction(
           semux.Network[info.network],

@@ -47,8 +47,6 @@ export async function fetchDelegates(): Promise<DelegateType[]> {
 }
 
 function compareDelegates(d1: DelegateTypeRemote, d2: DelegateTypeRemote): number {
-  const d1v = new BigNumber(d1.votes)
-  const d2v = new BigNumber(d1.votes)
-  const cmp = d1v.minus(d2v)
+  const cmp = new BigNumber(d2.votes).minus(new BigNumber(d1.votes))
   return cmp.isZero() ? 0 : cmp.isPositive() ? 1 : -1
 }

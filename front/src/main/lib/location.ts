@@ -1,8 +1,5 @@
 import { h } from 'hyperapp'
 import { State } from '../app'
-import { log } from './utils'
-import { Observable, fromEvent } from 'rxjs'
-import { map, startWith, pluck } from 'rxjs/operators'
 
 export interface LocationState {
   route: string
@@ -27,13 +24,6 @@ export function locationSubscribe(sub: (s: LocationState) => any): void {
   listener()
   window.addEventListener('hashchange', listener, false)
 }
-
-export const locationChanges = fromEvent(window, 'hashchange')
-  .pipe(
-    map((e: HashChangeEvent) => e.newURL),
-    startWith(window.location.hash),
-    map(parseLocation),
-  )
 
 type LinkProps = { to: string } & JSX.IntrinsicElements
 

@@ -75,7 +75,9 @@ export const rawDelegatesActions: DelegatesActions = {
         (map, { address, delegate, votes }) => map.set(myVotesKey(address, delegate), votes),
         new Map<string, BigNumber>(),
       ),
-      names: delegates.reduce((names, d) => names.set(d.address, d.name), new Map<string, string>()),
+      names: delegates.reduce(
+        (names, d) => names.set(d.address, d.name),
+        new Map<string, string>()),
     })),
   })),
 

@@ -17,12 +17,10 @@
   "devDependencies": {
     "@hyperapp/router": "0.7.0",
     "@types/long": "4.0.0",
-    "@types/luxon": "0.5.2",
     "bignumber.js": "7.0.1",
     "hyperapp": "1.2.5",
     "long": "4.0.0",
     "node-forge": "0.7.5",
-    "rxjs": "6.1.0",
     "semux": "1.1.1",
     "tachyons": "4.9.1",
     "ts-loader": "4.2.0",

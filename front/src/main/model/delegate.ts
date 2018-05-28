@@ -14,6 +14,7 @@ export interface DelegateTypeRemote {
 }
 
 export interface DelegateType {
+  rank: number,
   address: string
   name: string
   votes: BigNumber
@@ -26,12 +27,13 @@ export interface DelegateType {
 
 export async function fetchDelegates(): Promise<DelegateType[]> {
   const path = '/v2.1.0/delegates'
-  const remotes = await exec<DelegateTypeRemote[]>('GET', path)
-  return remotes.map((r) => {
+  const remotes = (await exec<DelegateTypeRemote[]>('GET', path)).sort(compareDelegates)
+  return remotes.map((r, rank_) => {
     const turnsHit = parseInt(r.turnsHit, 10)
     const turnsMissed = parseInt(r.turnsMissed, 10)
     const total = turnsHit + turnsMissed
     return {
+      rank: rank_ + 1,
       address: r.address,
       name: r.name,
       votes: new BigNumber(r.votes).div(1e9),
@@ -42,4 +44,11 @@ export async function fetchDelegates(): Promise<DelegateType[]> {
       validator: r.validator,
     }
   })
+}
+
+function compareDelegates(d1: DelegateTypeRemote, d2: DelegateTypeRemote): number {
+  const d1v = new BigNumber(d1.votes)
+  const d2v = new BigNumber(d1.votes)
+  const cmp = d1v.minus(d2v)
+  return cmp.isZero() ? 0 : cmp.isPositive() ? 1 : -1
 }

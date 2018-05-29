@@ -82,8 +82,8 @@ export async function fetchTxs(address: string, from: number, to: number): Promi
 
 export async function fetchLastTxs(account: AccountType, { page, size }: { page: number, size: number }) {
   const to = account.transactionCount - size * page
-  const from = to - size
-  return from >= 0 && to > from
+  const from = Math.max(0, to - size)
+  return to > from
     ? fetchTxs(account.address, from, to)
     : []
 }

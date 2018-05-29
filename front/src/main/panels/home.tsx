@@ -191,8 +191,8 @@ export function mathSignAndImg(state: HomeState, tx: TransactionType): [string, 
     vote: () => ['', 'vote.png'],
     unvote: () => ['', 'unvote.png'],
     transfer: () => {
-      const ourFrom = state.transactions.some((t) => t.from === tx.from)
-      const ourTo = state.transactions.some((t) => t.to === tx.to)
+      const ourFrom = state.accounts.some((t) => t.address === tx.from)
+      const ourTo = state.accounts.some((t) => t.address === tx.to)
       return ourFrom && ourTo ? ['', 'cycle.png']
         : ourFrom ? ['-', 'outbound.png']
           : ourTo ? ['+', 'inbound.png']

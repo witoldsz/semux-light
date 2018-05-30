@@ -16,6 +16,7 @@ import { AccountVoteType, fetchVotes } from '../model/vote'
 import { addresses, getKey } from '../model/wallet'
 
 const FETCH_INTERVAL = 20000
+const TX_FEE = new BigNumber('0.005')
 
 interface RemoteDataResponse {
   accounts: AccountType[]
@@ -34,7 +35,7 @@ export interface DelegatesState {
   remoteData: WebData<RemoteData>
   fetchTimeoutId: number | undefined
   selectedAccountIdx: number
-  voteAmount: BigNumber | undefined
+  voteAmount: string
   selectedDelegate: string
   voteResult: WebData<undefined>
 }
@@ -43,7 +44,7 @@ export const blankDelegates: DelegatesState = {
   remoteData: NotAsked,
   fetchTimeoutId: undefined,
   selectedAccountIdx: 0,
-  voteAmount: undefined,
+  voteAmount: '',
   selectedDelegate: '',
   voteResult: NotAsked,
 }
@@ -54,7 +55,7 @@ export interface DelegatesActions {
   fetchResponse: (r: WebData<RemoteDataResponse>) => (state: DelegatesState) => DelegatesState
   selectedAccountIdx: (n: number) => (state: DelegatesState) => DelegatesState
   selectDelegate: (d: string) => (s: DelegatesState, a: DelegatesActions) => DelegatesState
-  voteAmount: (a: BigNumber | string) => (s: DelegatesState) => DelegatesState
+  voteAmount: (a: string) => (s: DelegatesState) => DelegatesState
   vote: (s: { rootState: State, type: 'VOTE' | 'UNVOTE' }) => (s: DelegatesState, a: DelegatesActions) => DelegatesState
   voteResult: (w: WebData<undefined>) => (s: DelegatesState, a: DelegatesActions) => DelegatesState
 }
@@ -105,41 +106,29 @@ export const rawDelegatesActions: DelegatesActions = {
 
   selectDelegate: (selectedDelegate) => (state, actions) => ({ ...state, selectedDelegate }),
 
-  voteAmount: (val) => (state) => ({ ...state, voteAmount: val ? new BigNumber(val) : undefined }),
+  voteAmount: (voteAmount) => (state) => ({ ...state, voteAmount }),
 
   vote: ({ rootState, type }) => (state, actions) => {
     const key = getKey(rootState.wallet, state.selectedAccountIdx)
-    const voteAmount = state.voteAmount ||
-      successOf(state.remoteData)
-        .fmap(({ accounts }) => accounts[state.selectedAccountIdx].available)
-        .valueOr(ZERO)
-
-    if (voteAmount.isPositive()) {
-      successOf(rootState.info).fmap((info) => {
-        fetchAccount(key.toAddressHexString())
-          .then((account) => publishTx(new semux.Transaction(
-            semux.Network[info.network],
-            semux.TransactionType[type],
-            hexBytes(state.selectedDelegate),
-            Long.fromString(voteAmount.times(1e9).toString()),
-            Long.fromString('5000000'),
-            Long.fromNumber(account.nonce),
-            Long.fromNumber(Date.now()),
-            Buffer.from(''),
-          ).sign(key)))
-          .then(() => actions.voteResult(Success(undefined)))
-          .catch((e) => actions.voteResult(Failure(e.message)))
-      })
-      return { ...state, voteSubmit: Loading }
-    } else {
-      return { ...state, voteSubmit: NotAsked }
-    }
+    successOf(rootState.info).fmap((info) => {
+      fetchAccount(key.toAddressHexString())
+        .then((account) => publishTx(new semux.Transaction(
+          semux.Network[info.network],
+          semux.TransactionType[type],
+          hexBytes(state.selectedDelegate),
+          Long.fromString(voteAmount(state).times(1e9).toString()),
+          Long.fromString(TX_FEE.times(1e9).toString()),
+          Long.fromNumber(account.nonce),
+          Long.fromNumber(Date.now()),
+          Buffer.from(''),
+        ).sign(key)))
+        .then(() => actions.voteResult(Success(undefined)))
+        .catch((e) => actions.voteResult(Failure(e.message)))
+    })
+    return { ...state, voteResult: Loading }
   },
 
-  voteResult: (voteResult) => (state, actions) => {
-    setTimeout(() => actions.voteResult(NotAsked), 4000)
-    return { ...state, voteResult }
-  },
+  voteResult: (voteResult) => (state, actions) => ({ ...state, voteResult }),
 }
 
 export function DelegatesView(rootState: State, rootActions: Actions) {
@@ -163,7 +152,8 @@ export function DelegatesView(rootState: State, rootActions: Actions) {
 }
 
 function voteForm(rootState: State, remoteData: RemoteData, state: DelegatesState, actions: DelegatesActions) {
-  const disabled = !state.selectedDelegate || isLoading(state.voteResult) || isSuccess(state.voteResult)
+  const disabled = !state.selectedDelegate || isLoading(state.voteResult)
+  const noAmount = !voteAmount(state).gt(0)
   return <table class="mv3 dib lh-copy">
     <tr>
       <td class="tr"><label class="fw7 f6">Address:</label></td>
@@ -193,17 +183,17 @@ function voteForm(rootState: State, remoteData: RemoteData, state: DelegatesStat
           type="text"
           value={state.voteAmount ? state.voteAmount.toString() : undefined}
           oninput={(evt) => actions.voteAmount(evt.target.value)}
-          placeholder={remoteData.accounts[state.selectedAccountIdx].available.toString()}
+          placeholder={maxVote(state).toString()}
           disabled={disabled}
         />
         <button
-          disabled={disabled}
+          disabled={disabled || noAmount}
           onclick={() => actions.vote({ rootState, type: 'VOTE' })}
         >
           Vote
         </button>
         <button
-          disabled={disabled}
+          disabled={disabled || noAmount}
           onclick={() => actions.vote({ rootState, type: 'UNVOTE' })}
         >
           Unvote
@@ -246,7 +236,7 @@ function table(remoteData: RemoteData, state: DelegatesState, actions: Delegates
               </td>
               <td
                 class={`pv1 pr2 pl2 bb bl b--black-20 tr ${myVotes.gt(0) ? 'underline' : ''}`}
-                onclick={() => myVotes.gt(0) && actions.voteAmount(myVotes)}
+                onclick={() => myVotes.gt(0) && actions.voteAmount(myVotes.toString())}
               >
                 {semNoLabel(myVotes)}
               </td>
@@ -274,4 +264,15 @@ function myVotesForDelegate(r: RemoteData, state: DelegatesState, delegate: stri
 function delegateAbbr(list: DelegateType[], selectedDelegate) {
   const s = list.find((d) => d.address === selectedDelegate)
   return s ? `${s.name} (${addressAbbr(s.address)})` : ''
+}
+
+function maxVote(state: DelegatesState): BigNumber {
+  return successOf(state.remoteData)
+    .fmap(({ accounts }) => accounts[state.selectedAccountIdx])
+    .fmap(({ available }) => BigNumber.max(0, available.minus(TX_FEE.times(2))))
+    .valueOr(ZERO)
+}
+
+function voteAmount(state: DelegatesState): BigNumber {
+  return state.voteAmount ? new BigNumber(state.voteAmount) : maxVote(state)
 }

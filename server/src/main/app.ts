@@ -1,17 +1,20 @@
 import * as express from 'express'
-import * as path from 'path'
+import * as helmet from 'helmet'
 import * as httpProxy from 'http-proxy'
-import * as request from 'superagent'
+import * as path from 'path'
+import { settings } from './settings'
 
-const staticsPath = path.join(__dirname, '..', '..', 'front', 'dist')
+const staticsPath = path.join(__dirname, '..', '..', 'front', 'build')
 
 async function main() {
   const app = express()
+  app.use(helmet())
   app.use(express.static(staticsPath))
 
+  const { address, user, pass } = settings.semuxApi
   const proxy = httpProxy.createProxy({
-    target: 'http://localhost:5171',
-    auth: 'user:123456',
+    target: address,
+    auth: `${user}:${pass}`,
     proxyTimeout: 5000,
   })
   const proxyMiddleware = (req, res, next) => {
@@ -34,7 +37,8 @@ async function main() {
   })
 
   const addr = await new Promise((resolve) => {
-    const server = app.listen(3333, () => resolve(server.address()))
+    const { port, hostname } = settings.semuxLight
+    const server = app.listen(port, hostname, () => resolve(server.address()))
   })
   console.log('server listening:', addr)
 }

@@ -2,7 +2,7 @@
   "name": "semux-light-front",
   "version": "1.0.0",
   "description": "Semux Light Wallet - Frontend",
-  "main": "dist/app.js",
+  "main": "build/app.js",
   "scripts": {
     "test": "make test"
   },

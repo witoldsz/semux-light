@@ -1,21 +1,21 @@
 export PATH := node_modules/.bin:$(PATH)
 
-.PHONY: dist
-dist: dist/COMPILED
+.PHONY: build
+build: build/COMPILED
 
 .PHONY: deploy
-deploy: dist/COMPILED
-	node dist/app.js
+deploy:
+	node build/app.js
 
 .PHONY: debug
-debug: dist/COMPILED
-	node --inspect=0.0.0.0 dist/app.js
+debug: build/COMPILED
+	node --inspect=0.0.0.0 build/app.js
 
 .PHONY: clean
 clean:
-	rm -rf dist
+	rm -rf dist build
 
-dist/COMPILED: node_modules/INSTALLED $(shell find ./src -type f)
+build/COMPILED: node_modules/INSTALLED $(shell find ./src -type f)
 	tslint -p src -t codeFrame
 	tsc -p src/tsconfig.json
 	touch $@

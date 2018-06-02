@@ -1,7 +1,19 @@
+function env(e: string): string {
+  const value = process.env[e]
+  if (!value) {
+    throw new Error(`environment ${e}='${value}' must be set`)
+  }
+  return value
+}
+
 export const settings = {
-  semuxApiService: {
-    address: 'http://127.0.0.1:5171',
-    user: 'user',
-    pass: '123456',
+  semuxApi: {
+    address: env('SEMUX_API_ADDR'),
+    user: env('SEMUX_API_USER'),
+    pass: env('SEMUX_API_PASS'),
+  },
+  semuxLight: {
+    port: parseInt(env('SEMUX_LIGHT_PORT'), 10),
+    hostname: env('SEMUX_LIGHT_BIND_IP'),
   },
 }

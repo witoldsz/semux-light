@@ -14,6 +14,7 @@ import { ReceiveActions, ReceiveState, ReceiveView, initialReceiveState, rawRece
 import { SendActions, SendState, SendView, initialSendState, rawSendActions } from './panels/send'
 import { TransactionsView, TxsActions, TxsState, initialTxsState, rawTxsActions } from './panels/transactions'
 import { WelcomeActions, WelcomeState, WelcomeView, initialWelcomeState, rawWelcomeActions } from './panels/welcome'
+import { GithubRibbon } from './lib/github-ribbon'
 
 export interface State {
   location: LocationState
@@ -75,6 +76,7 @@ const rawActions: Actions = {
 
 const view = (state: State, actions: Actions) => (
   <div>
+    <GithubRibbon />
     <p class="tc bg-yellow">
       {successOf(state.info)
         .fmap((i) => `Network: ${i.network}`)

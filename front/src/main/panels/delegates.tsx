@@ -135,6 +135,7 @@ export function DelegatesView(rootState: State, rootActions: Actions) {
   const state = rootState.delegates
   const actions = rootActions.delegates
   return <div
+    key="DelegatesView"
     class="pa2"
     oncreate={() => actions.fetch(rootState)}
     ondestroy={() => actions.cancelNextFetch()}

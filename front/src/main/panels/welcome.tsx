@@ -1,124 +1,153 @@
-import { h, app } from 'hyperapp'
-import { State, Actions } from '../app'
-import { readInputFile } from '../lib/utils'
-import { WalletState, Wallet, createNewWallet, validateWallet, validatePassword } from '../model/wallet'
-import { InfoType } from '../model/info'
-import { successOf } from '../lib/webdata'
-import semux from 'semux'
-import { saveJsonFile } from '../lib/saveFile'
+import { h } from 'hyperapp'
+import { Actions, State } from '../app'
 import { Password } from '../lib/password'
-import { Either } from 'tsmonad'
+import { readInputFile } from '../lib/utils'
+import { successOf } from '../lib/webdata'
+import { Wallet, createNewWallet, validatePassword, validateWallet, walletHref } from '../model/wallet'
 
 export interface WelcomeState {
-  action: Action | undefined
-  errorMessage: string
-  loadMessage: string
-  createMessage: string
-  walletFile: any
+  selected: SelectedAction
+  loadAction: LoadAction
+  createAction: CreateAction
 }
 
-type Action = 'Load' | ['CreateNew', boolean]
-function isLoad(a: Action | undefined): a is 'Load' {
-  return a === 'Load'
+type SelectedAction = '' | 'LoadAction' | 'CreateAction'
+
+interface LoadAction {
+  errorMsg: string
 }
-function isCreateNew(a: Action | undefined): a is ['CreateNew', boolean] {
-  return !!a && a[0] === 'CreateNew'
+
+const loadAction: LoadAction = {
+  errorMsg: '',
 }
-function isCreateNewImport(a: Action | undefined) {
-  return isCreateNew(a) && a[1]
+
+interface CreateAction {
+  wallet: Wallet | undefined
+  errorMsg: string
+  importKeys: boolean
+  myWalletIsSafeVisible: boolean
+  myWalletIsSafe: boolean
+}
+
+const createAction: CreateAction = {
+  wallet: undefined,
+  errorMsg: '',
+  importKeys: false,
+  myWalletIsSafeVisible: false,
+  myWalletIsSafe: false,
 }
 
 export const initialWelcomeState: WelcomeState = {
-  action: undefined,
-  errorMessage: '',
-  loadMessage: '',
-  createMessage: '',
-  walletFile: undefined,
+  selected: '',
+  loadAction,
+  createAction,
 }
 
 export interface WelcomeActions {
-  setAction: (_: Action) => (s: WelcomeState) => WelcomeState
-  setError: (_: any) => (s: WelcomeState) => WelcomeState
-  setWalletFileBody: (body: Either<string, any>) => (s: WelcomeState) => WelcomeState
-  load: (_: [Password, State, Actions]) => (s: WelcomeState, a: WelcomeActions) => WelcomeState
-  create: (_: [Password, Password, State, Actions, string[]]) => (s: WelcomeState) => WelcomeState
+  setSelected: (_: SelectedAction) => (s: WelcomeState) => WelcomeState
+  load: (_: [Password, string, State, Actions]) => (s: WelcomeState, a: WelcomeActions) => WelcomeState
+  toggleImportKeys: () => (s: WelcomeState) => WelcomeState
+  setMyWalletIsSafeVisibile: () => (s: WelcomeState) => WelcomeState
+  toggleMyWalletIsSafe: () => (s: WelcomeState) => WelcomeState
+  create: (_: [Password, Password, string[], State, Actions]) => (s: WelcomeState) => WelcomeState
+  restoreInitialState: () => WelcomeState
 }
 
 export const rawWelcomeActions: WelcomeActions = {
-  setAction: (action) => (state) => ({ ...state, action }),
+  setSelected: (selected) => (state) => ({ ...state, selected }),
 
-  setError: (error = '') => (state) => (
-    {
-      ...state,
-      errorMessage: error.message || error.toString(),
-    }
-  ),
-
-  setWalletFileBody: (bodyE) => (state) => (
-    bodyE.caseOf({
-      left: (loadMessage) => ({ ...state, loadMessage }),
-      right: (body) => ({ ...state, loadMessage: '', walletFile: body }),
-    })
-  ),
-
-  load: ([password, rootState, rootActions]) => (state, actions) => {
+  load: ([password, walletFile, rootState, rootActions]) => (state, actions) => {
     try {
       successOf(rootState.info).fmap((info) => {
-        const wallet = validateWallet(state.walletFile, info.network)
+        const wallet = validateWallet(walletFile, info.network)
         rootActions.setWallet(validatePassword(wallet, password))
       })
       return initialWelcomeState
     } catch (error) {
-      return { ...state, loadMessage: error.message }
+      return { ...state, loadAction: { errorMsg: error.message } }
     }
   },
 
-  create: ([password, password2, rootState, rootActions, privateKeys]) => (state) => {
+  toggleImportKeys: () => (state) => ({
+    ...state,
+    createAction: {
+      ...state.createAction,
+      importKeys: !state.createAction.importKeys,
+    },
+  }),
+
+  setMyWalletIsSafeVisibile: () => (state) => ({
+    ...state,
+    createAction: {
+      ...state.createAction,
+      myWalletIsSafeVisible: !state.createAction.myWalletIsSafeVisible,
+    },
+  }),
+
+  toggleMyWalletIsSafe: () => (state) => ({
+    ...state,
+    createAction: {
+      ...state.createAction,
+      myWalletIsSafe: !state.createAction.myWalletIsSafe,
+    },
+  }),
+
+  create: ([password, password2, privateKeys, rootState, rootActions]) => (state) => {
+    const action = state.createAction
+    let result: WelcomeState
     if (!password.equals(password2)) {
-      return { ...state, createMessage: 'Passwords does not match' }
+      result = {
+        ...state,
+        createAction: { ...action, errorMsg: 'Passwords does not match' },
+      }
+    } else if (password.isEmpty()) {
+      result = {
+        ...state,
+        createAction: { ...action, errorMsg: 'Password cannot be empty' },
+      }
+    } else {
+      result = successOf(rootState.info)
+        .fmap<WelcomeState>((info) => {
+          const wallet = createNewWallet(password, info.network, privateKeys)
+          return { ...state, createAction: { ...action, wallet } }
+        })
+        .valueOr(state)
     }
-    if (password.isEmpty()) {
-      return { ...state, createMessage: 'Password cannot be empty' }
-    }
-    successOf(rootState.info).fmap((info) => {
-      const wallet = createNewWallet(password, info.network, privateKeys)
-      rootActions.setWallet({ ...wallet, password })
-      saveJsonFile('semux-wallet.json', wallet)
-    })
-    return initialWelcomeState
+    return result
   },
+
+  restoreInitialState: () => initialWelcomeState,
 }
 
 export const WelcomeView = () => (rootState: State, rootActions: Actions) => {
   const state = rootState.welcome
   const actions = rootActions.welcome
 
+  return state.selected === 'CreateAction' && state.createAction.wallet
+    ? newWalletView(state, state.createAction.wallet, actions)
+    : actionsView(rootState, rootActions)
+}
+
+function actionsView(rootState: State, rootActions: Actions) {
+  const actions = rootActions.welcome
+  const state = rootState.welcome
   return <div class="pa3">
     <h1>Welcome to the Semux Light!</h1>
-    {state.errorMessage && <p class="dark-red">{state.errorMessage}</p>}
 
     <div class="mv2">
       <label>
         <input
           type="radio"
           name="welcome"
-          checked={isLoad(state.action)}
+          checked={state.selected === 'LoadAction'}
           onclick={() => {
-            actions.setAction('Load')
+            actions.setSelected('LoadAction')
             document.getElementById('load')!.click()
           }}
         />
         {' '}Load wallet from file
-      </label>
-      <input
-          class="clip"
-          type="file"
-          id="load"
-          onchange={(evt) => readInputFile(evt.target)
-            .then((body) => actions.setWalletFileBody(Either.right(body)))
-            .catch((err) => actions.setWalletFileBody(Either.left(err.message)))
-          }
-        />
+    </label>
+      <input class="clip" type="file" id="load" />
     </div>
 
     <div class="mv2">
@@ -126,19 +155,17 @@ export const WelcomeView = () => (rootState: State, rootActions: Actions) => {
         <input
           type="radio"
           name="welcome"
-          checked={isCreateNew(state.action)}
-          onclick={() => {
-            actions.setAction(['CreateNew', false])
-          }}
+          checked={state.selected === 'CreateAction'}
+          onclick={() => actions.setSelected('CreateAction')}
         />
         {' '}Create new wallet file
-      </label>
+    </label>
     </div>
 
     <div class="mv3">
       <label class="fw7 f6">
         Password
-        <input
+      <input
           key="password"
           id="password"
           type="password"
@@ -148,21 +175,31 @@ export const WelcomeView = () => (rootState: State, rootActions: Actions) => {
       </label>
     </div>
 
-    {isLoad(state.action) &&
+    {state.selected === 'LoadAction' &&
       <div>
-        <button onclick={() => actions.load([passwordById('password'), rootState, rootActions])}>
+        <button
+          onclick={() => (
+            inputFileById('load')
+              .then((walletFile) => actions.load([
+                passwordById('password'),
+                walletFile,
+                rootState,
+                rootActions,
+              ]))
+          )}
+        >
           Load wallet
-        </button>
-        <span class="ml2 dark-red">{state.loadMessage}</span>
+      </button>
+        <span class="ml2 dark-red">{state.loadAction.errorMsg}</span>
       </div>
     }
 
-    {isCreateNew(state.action) &&
+    {state.selected === 'CreateAction' &&
       <div>
         <div class="mv3">
           <label class="fw7 f6">
             Repeat password
-            <input
+          <input
               key="password2"
               id="password2"
               type="password"
@@ -177,17 +214,17 @@ export const WelcomeView = () => (rootState: State, rootActions: Actions) => {
             <input
               type="checkbox"
               name="import"
-              checked={isCreateNewImport(state.action)}
-              onclick={() => {actions.setAction(['CreateNew', !isCreateNewImport(state.action)])}}
+              checked={state.createAction.importKeys}
+              onclick={() => {actions.toggleImportKeys()}}
             />
             {' '}Import keys
-          </label>
+        </label>
         </div>
-        {isCreateNewImport(state.action) &&
+        {state.createAction.importKeys &&
           <div class="mv3">
             <label class="fw7 f6">
               Private keys
-              <br/>
+            <br />
               <textarea
                 class="w-100"
                 id="privateKeys"
@@ -197,16 +234,60 @@ export const WelcomeView = () => (rootState: State, rootActions: Actions) => {
         }
 
         <div>
-          <button onclick={() => actions.create([
-            passwordById('password'),
-            passwordById('password2'),
-            rootState,
-            rootActions,
-            privateKeysOfTextarea('privateKeys'),
-          ])}>
+          <button
+            onclick={() => actions.create([
+              passwordById('password'),
+              passwordById('password2'),
+              privateKeysOfTextarea('privateKeys'),
+              rootState,
+              rootActions,
+            ])}
+          >
             Create new wallet and save the file!
-          </button><span class="ml2 dark-red">{state.createMessage}</span>
+        </button><span class="ml2 dark-red">{state.createAction.errorMsg}</span>
         </div>
+      </div>
+    }
+  </div>
+}
+
+function newWalletView(state: WelcomeState, wallet: Wallet, actions: WelcomeActions) {
+  return <div class="pa3">
+    <div class="mv2">
+      <h1>Your new wallet is (almost) ready!</h1>
+      <p><b>Remember:</b></p>
+      <ul>
+        <li>The <b>wallet + password = full access</b> to your funds.</li>
+        <li>Keep you wallet and password safe, but <b>not together</b>.</li>
+        <li>If your password is easy to guess and wallet easy to get: your funds are not safe.</li>
+        <li>Semux Light <b>never</b> sends wallet and/or passwords over the wire. Ever.</li>
+      </ul>
+
+      <p>Now, save your{' '}
+        <a
+          href={walletHref(wallet)} download="semux-wallet.json"
+          onclick={() => actions.setMyWalletIsSafeVisibile()}
+        >
+        semux-wallet.json
+        </a>
+      </p>
+    </div>
+    {state.createAction.myWalletIsSafeVisible &&
+      <div class="mv2">
+        <label>
+          <input
+            type="checkbox"
+            onclick={() => {actions.toggleMyWalletIsSafe()}}
+          />
+          {' '}Yes, my wallet is safe and I have a backup.
+        </label>
+      </div>
+    }
+    {state.createAction.myWalletIsSafe &&
+      <div class="mv2">
+        <button onclick={() => actions.restoreInitialState()}>
+          I am ready to load my new wallet!
+        </button>
       </div>
     }
   </div>
@@ -214,6 +295,10 @@ export const WelcomeView = () => (rootState: State, rootActions: Actions) => {
 
 function passwordById(id: string): Password {
   return new Password((document.getElementById(id) as HTMLInputElement).value)
+}
+
+function inputFileById(id: string): Promise<string> {
+  return readInputFile(document.getElementById(id) as HTMLInputElement)
 }
 
 function privateKeysOfTextarea(id: string): string[] {

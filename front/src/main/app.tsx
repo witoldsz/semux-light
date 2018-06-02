@@ -1,6 +1,6 @@
 import { app, h } from 'hyperapp'
 import {
-  LocationActions, LocationState, Route, initialLocationState, locationSubscribe, rawLocationActions,
+  LocationActions, LocationState, Route, locationSubscribe, rawLocationActions, parseLocation,
 } from './lib/location'
 import { NotAsked, failureOf, isLoading, isSuccess, successOf } from './lib/webdata'
 import { InfoState, fetchInfo } from './model/info'
@@ -28,8 +28,9 @@ export interface State {
   delegates: DelegatesState
 }
 
-const initialState: State = {
-  location: initialLocationState,
+function initialState(): State {
+  return {
+  location: parseLocation(),
   info: NotAsked,
   wallet: undefined,
   /* panels: */
@@ -40,13 +41,14 @@ const initialState: State = {
   transactions: initialTxsState,
   delegates: blankDelegates,
 }
+}
 
 export interface Actions {
+  location: LocationActions
   setInfo: (i: InfoState) => (s: State) => State
   setWallet: (w: WalletState) => (s: State) => State
   /* panels: */
   welcome: WelcomeActions
-  location: LocationActions
   home: HomeActions
   send: SendActions
   receive: ReceiveActions
@@ -55,11 +57,15 @@ export interface Actions {
 }
 
 const rawActions: Actions = {
+  location: rawLocationActions,
   setInfo: (infoState) => (state) => ({ ...state, info: infoState }),
-  setWallet: (walletState) => (state) => ({ ...state, wallet: walletState }),
+  setWallet: (walletState) => (state) => ({
+    ...initialState(),
+    info: state.info,
+    wallet: walletState,
+  }),
   /* panels: */
   welcome: rawWelcomeActions,
-  location: rawLocationActions,
   home: rawHomeActions,
   send: rawSendActions,
   receive: rawReceiveActions,
@@ -99,7 +105,7 @@ const view = (state: State, actions: Actions) => (
   </div>
 )
 
-const actions = app(initialState, rawActions, view, document.body)
+const actions = app(initialState(), rawActions, view, document.body)
 
 fetchInfo().then(actions.setInfo)
 

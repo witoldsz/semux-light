@@ -5,10 +5,6 @@ export interface LocationState {
   route: string
 }
 
-export const initialLocationState: LocationState = {
-  route: '',
-}
-
 export interface LocationActions {
   setCurrent: (s: LocationState) => LocationState
 }
@@ -19,7 +15,7 @@ export const rawLocationActions: LocationActions = {
 
 export function locationSubscribe(sub: (s: LocationState) => any): void {
   function listener() {
-    sub(parseLocation(window.location.hash))
+    sub(parseLocation())
   }
   listener()
   window.addEventListener('hashchange', listener, false)
@@ -45,8 +41,9 @@ function routeMatches(s: LocationState, path: string) {
   const c = s.route
 }
 
-function parseLocation(url: string): LocationState {
-  const hash =  url.split('#').slice(1).join('#')
+export function parseLocation(): LocationState {
+  const locationHash = window.location.hash
+  const hash =  locationHash.split('#').slice(1).join('#')
   const route = hash.split('/').filter((x) => x).join('/')
   return { route }
 }

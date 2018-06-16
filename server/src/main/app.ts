@@ -1,4 +1,5 @@
 import * as express from 'express'
+import { Request, Response, NextFunction } from 'express'
 import * as helmet from 'helmet'
 import * as httpProxy from 'http-proxy'
 import * as path from 'path'
@@ -17,9 +18,14 @@ async function main() {
     auth: `${user}:${pass}`,
     proxyTimeout: 5000,
   })
-  const proxyMiddleware = (req, res, next) => {
+
+  const corsHeader = (res: Response) => res.header('Access-Control-Allow-Origin', '*')
+
+  const proxyMiddleware = (req: Request, res: Response, next: NextFunction) => {
+    corsHeader(res)
     proxy.web(req, res, undefined, next)
   }
+
   app.get('/v2.1.0/info', proxyMiddleware)
   app.get('/v2.1.0/account', proxyMiddleware)
   app.get('/v2.1.0/account/transactions', proxyMiddleware)
@@ -27,6 +33,10 @@ async function main() {
   app.get('/v2.1.0/account/votes', proxyMiddleware)
   app.get('/v2.1.0/delegates', proxyMiddleware)
   app.get('/v2.1.0/latest-block', proxyMiddleware)
+  app.options('/v2.1.0/transaction/raw', (req, res) => {
+    corsHeader(res)
+    res.end()
+  })
   app.post('/v2.1.0/transaction/raw', proxyMiddleware)
 
   app.use((err, req, res, next) => {

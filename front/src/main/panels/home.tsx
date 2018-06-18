@@ -96,7 +96,7 @@ export function HomeView(rootState: State, rootActions: Actions) {
   const state = rootState.home
   const actions = rootActions.home
   return <div
-    class="pa2"
+    class="pa2 overflow-x-auto"
     key="HomeView"
     oncreate={() => actions.fetch(rootState)}
     ondestroy={() => actions.cancelNextFetch()}

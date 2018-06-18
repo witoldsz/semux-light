@@ -79,7 +79,7 @@ const rawActions: Actions = {
 }
 
 const view = (state: State, actions: Actions) => (
-  <div>
+  <div class="overflow-x-hidden">
     <GithubRibbon />
     <p class="tc bg-yellow">
       {successOf(state.info)
@@ -93,7 +93,7 @@ const view = (state: State, actions: Actions) => (
       !state.wallet
         ? <WelcomeView />
         :
-        <div>
+        <div class="overflow-x-hidden">
           <h1 class="pa2">Semux Light</h1>
           <NavView />
           <Route path={Nav.Home} render={HomeView} />

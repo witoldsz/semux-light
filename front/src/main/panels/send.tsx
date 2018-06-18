@@ -100,7 +100,7 @@ export function SendView(rootState: State, rootActions: Actions) {
   const state = rootState.send
 
   return <div
-    class="pa2"
+    class="pa2 overflow-x-auto"
     key="SendView"
     oncreate={() => actions.fetchAccounts(rootState)}
   >

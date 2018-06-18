@@ -1,6 +1,15 @@
 
 # Semux Light
 
+The Semux Light Mainnet client is here: https://semux.online
+
+You can also use the testnet installation here: https://testnet.semux.online.
+Just create a testnet wallet, copy your address, claim 1000 testnet SEM here: https://www.semux.org/testnetfaucet and spent as you will :)
+
+You can also:
+- build and deploy the semux-light-server and semux-light-front yourself (see below), or
+- download the semux-light-front package from "Release" tab, unzip, open `index.html` and it will use my backend hosted at semux.online server.
+
 ---
 
 ![semux-light](https://github.com/witoldsz/semux-light/raw/assets/semux-light-testnet.png)

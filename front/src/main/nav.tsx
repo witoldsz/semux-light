@@ -76,8 +76,8 @@ const NavButton = (props: NavProps) => (
 )
 
 const NavLabel = (prop) => [
-  <img src={`resources/${prop.nav}.png`} class="w2 h2" />,
-  <span class="pl1"> {`${navLabels[prop.nav]}`}</span>,
+  navLabels[prop.nav] ? <img src={`resources/${prop.nav}.png`} class="w2 h2" /> : '',
+  <span class="pl1"> {`${navLabels[prop.nav] || 'Menu'}`}</span>,
 ]
 
 interface NavArrowProps {

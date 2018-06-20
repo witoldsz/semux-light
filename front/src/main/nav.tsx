@@ -41,17 +41,23 @@ const navLabels = {
 
 export const NavView = () => (s: State, a: Actions) => (
   <div class="pa2">
-    <div class={`dn-l bb bg-light-yellow ${navClass.join(' ')}`} onclick={() => {a.navigation.toggleMobileMenu()}}>
+    <div
+      class={`dn-l bb bg-light-yellow ${navClass}`}
+      onclick={() => {a.navigation.toggleMobileMenu()}}
+    >
       <NavLabel nav={s.location.route} />
       <NavArrow open={s.navigation.mobileMenuOpen}/>
     </div>
-    <div class={s.navigation.mobileMenuOpen ? 'db db-l' : 'dn db-l'}>
+    <div
+      class={`db-l ${s.navigation.mobileMenuOpen ? '' : 'dn'}`}
+      onclick={() => {a.navigation.toggleMobileMenu()}}
+    >
       <NavLink nav={Nav.Home} />
       <NavLink nav={Nav.Send} />
       <NavLink nav={Nav.Receive} />
       <NavLink nav={Nav.Transactions} />
       <NavLink nav={Nav.Delegates} />
-      <NavButton nav={Nav.Lock} onclick={() => {a.setWallet(undefined)}}/>
+      <NavButton nav={Nav.Lock} onclick={() => {a.setWallet(undefined)}} />
     </div>
   </div>
 )
@@ -61,16 +67,14 @@ interface NavProps { nav: Nav, onclick?: () => void }
 const NavLink = (props: NavProps) => (s: State) => (
   <Link
     to={props.nav}
-    class={navClass.concat([
-      s.location.route === props.nav ? ACTIVE_COLOR : INACTIVE_COLOR,
-    ]).join(' ')}
+    class={`${navClass} ${s.location.route === props.nav ? ACTIVE_COLOR : INACTIVE_COLOR}`}
   >
     <NavLabel nav={props.nav} />
   </Link>
 )
 
 const NavButton = (props: NavProps) => (
-  <button class={navClass.join(' ')} onclick={props.onclick}>
+  <button class={navClass} onclick={props.onclick}>
     <NavLabel nav={props.nav} />
   </button>
 )
@@ -105,4 +109,4 @@ const navClass = [
   'mr3',
   'w-100',
   'w-auto-l',
-]
+].join(' ')

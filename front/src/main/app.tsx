@@ -5,7 +5,7 @@ import {
 import { NotAsked, failureOf, isLoading, isSuccess, successOf } from './lib/webdata'
 import { InfoState, fetchInfo } from './model/info'
 import { WalletState } from './model/wallet'
-import { Nav, NavView } from './nav'
+import {initialNavigationState, Nav, NavigationActions, NavigationState, NavView, rawNavigationActions} from './nav'
 import {
   DelegatesActions, DelegatesState, DelegatesView, blankDelegates, rawDelegatesActions,
 } from './panels/delegates'
@@ -21,6 +21,7 @@ export interface State {
   info: InfoState
   wallet: WalletState
   /* panels: */
+  navigation: NavigationState
   welcome: WelcomeState
   home: HomeState
   send: SendState
@@ -31,17 +32,18 @@ export interface State {
 
 function initialState(): State {
   return {
-  location: parseLocation(),
-  info: NotAsked,
-  wallet: undefined,
-  /* panels: */
-  welcome: initialWelcomeState,
-  home: initialHomeState,
-  send: initialSendState,
-  receive: initialReceiveState,
-  transactions: initialTxsState,
-  delegates: blankDelegates,
-}
+    location: parseLocation(),
+    info: NotAsked,
+    wallet: undefined,
+    /* panels: */
+    navigation: initialNavigationState,
+    welcome: initialWelcomeState,
+    home: initialHomeState,
+    send: initialSendState,
+    receive: initialReceiveState,
+    transactions: initialTxsState,
+    delegates: blankDelegates,
+  }
 }
 
 export interface Actions {
@@ -49,6 +51,7 @@ export interface Actions {
   setInfo: (i: InfoState) => (s: State) => State
   setWallet: (w: WalletState) => (s: State) => State
   /* panels: */
+  navigation: NavigationActions
   welcome: WelcomeActions
   home: HomeActions
   send: SendActions
@@ -66,6 +69,7 @@ const rawActions: Actions = {
     wallet: walletState,
   }),
   /* panels: */
+  navigation: rawNavigationActions,
   welcome: rawWelcomeActions,
   home: rawHomeActions,
   send: rawSendActions,
@@ -75,7 +79,7 @@ const rawActions: Actions = {
 }
 
 const view = (state: State, actions: Actions) => (
-  <div>
+  <div class="overflow-x-hidden">
     <GithubRibbon />
     <p class="tc bg-yellow">
       {successOf(state.info)
@@ -89,7 +93,7 @@ const view = (state: State, actions: Actions) => (
       !state.wallet
         ? <WelcomeView />
         :
-        <div>
+        <div class="overflow-x-hidden">
           <h1 class="pa2">Semux Light</h1>
           <NavView />
           <Route path={Nav.Home} render={HomeView} />

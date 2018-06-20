@@ -54,7 +54,7 @@ export function ReceiveView(rootState: State, rootActions: Actions) {
   const state = rootState.receive
   const actions = rootActions.receive
   return <div
-    class="pa2"
+    class="pa2 overflow-x-auto"
     key="ReceiveView"
     oncreate={() => actions.fetch(rootState)}
     ondestroy={() => actions.cancelNextFetch()}

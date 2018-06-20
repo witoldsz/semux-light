@@ -109,7 +109,7 @@ export function TransactionsView(rootState: State, rootActions: Actions) {
   const actions = rootActions.transactions
   const page = pageOf(state, state.selectedAddress)
   return <div
-    class="pa2"
+    class="pa2 overflow-x-auto"
     key="TransactionsView"
     oncreate={() => actions.fetch({ rootState })}
     ondestroy={() => actions.cancelNextFetch()}

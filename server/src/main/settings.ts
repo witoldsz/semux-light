@@ -16,4 +16,5 @@ export const settings = {
     port: parseInt(env('SEMUX_LIGHT_PORT'), 10),
     hostname: env('SEMUX_LIGHT_BIND_IP'),
   },
+  semPremine: 25000000,
 }

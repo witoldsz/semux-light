@@ -1,5 +1,5 @@
 import * as forge from 'node-forge'
-import semux from 'semux'
+import { Key } from 'semux-js'
 import { Password } from './password'
 
 const { random, pkcs5  } = forge
@@ -12,7 +12,7 @@ const AES_KEY_LEN = 24 // AES-192
 export interface EncryptOpts {
   salt: string
   iv: string
-  key: { getEncodedPrivateKey: () => Uint8Array } // use 'Key': https://github.com/semuxproject/semux-js-sdk/issues/24
+  key: Key
   password: Password
 }
 

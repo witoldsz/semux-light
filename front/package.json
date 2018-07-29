@@ -21,7 +21,7 @@
     "hyperapp": "1.2.5",
     "long": "4.0.0",
     "node-forge": "0.7.5",
-    "semux": "1.1.1",
+    "semux-js": "1.2.0",
     "tachyons": "4.9.1",
     "ts-loader": "4.2.0",
     "tslint": "5.9.1",

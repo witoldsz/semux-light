@@ -2,7 +2,7 @@ import BigNumber from 'bignumber.js'
 import { Buffer } from 'buffer'
 import { h } from 'hyperapp'
 import * as Long from 'long'
-import semux from 'semux'
+import { Network, Transaction, TransactionType } from 'semux-js'
 import { Actions, State } from '../app'
 import { addressAbbr, sem, semNoLabel } from '../lib/format'
 import { ZERO, concat, hexBytes } from '../lib/utils'
@@ -14,6 +14,7 @@ import { DelegateType, fetchDelegates } from '../model/delegate'
 import { publishTx } from '../model/transaction'
 import { AccountVoteType, fetchVotes } from '../model/vote'
 import { addresses, getKey } from '../model/wallet'
+import { maybe } from 'tsmonad'
 
 const FETCH_INTERVAL = 20000
 const TX_FEE = new BigNumber('0.005')
@@ -33,7 +34,7 @@ interface RemoteData {
 
 export interface DelegatesState {
   remoteData: WebData<RemoteData>
-  fetchTimeoutId: number | undefined
+  fetchTimeoutId: NodeJS.Timer | undefined
   selectedAccountIdx: number
   voteAmount: string
   selectedDelegate: string
@@ -75,6 +76,7 @@ export const rawDelegatesActions: DelegatesActions = {
       })))
       .catch((err) => actions.fetchResponse(Failure(err.message)))
 
+    maybe(state.fetchTimeoutId).lift(clearTimeout)
     return {
       ...state,
       fetchTimeoutId: setTimeout(() => actions.fetch(rootState), FETCH_INTERVAL),
@@ -83,7 +85,7 @@ export const rawDelegatesActions: DelegatesActions = {
   },
 
   cancelNextFetch: () => (state) => {
-    clearTimeout(state.fetchTimeoutId)
+    maybe(state.fetchTimeoutId).lift(clearTimeout)
     return { ...state, fetchTimeoutId: undefined}
   },
 
@@ -112,9 +114,9 @@ export const rawDelegatesActions: DelegatesActions = {
     const key = getKey(rootState.wallet, state.selectedAccountIdx)
     successOf(rootState.info).fmap((info) => {
       fetchAccount(key.toAddressHexString())
-        .then((account) => publishTx(new semux.Transaction(
-          semux.Network[info.network],
-          semux.TransactionType[type],
+        .then((account) => publishTx(new Transaction(
+          Network[info.network],
+          TransactionType[type],
           hexBytes(state.selectedDelegate),
           Long.fromString(voteAmount(state).times(1e9).toString()),
           Long.fromString(TX_FEE.times(1e9).toString()),

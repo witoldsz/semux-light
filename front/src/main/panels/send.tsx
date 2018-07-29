@@ -1,17 +1,15 @@
 import { h } from 'hyperapp'
 import { Buffer } from 'buffer'
-import BigNumber from 'bignumber.js'
 import { State, Actions } from '../app'
 import {
   WebData, NotAsked, Success, Failure, isSuccess, Loading, successOf, caseWebDataOf, failureOf, isLoading,
 } from '../lib/webdata'
-import semux from 'semux'
+import { Network, Transaction, TransactionType } from 'semux-js'
 import * as Long from 'long'
 import { hexBytes, log } from '../lib/utils'
-import { Either } from 'tsmonad'
 import { publishTx } from '../model/transaction'
 import { fetchAccount, AccountType } from '../model/account'
-import { accounts, Account, addresses, getKey } from '../model/wallet'
+import { addresses, getKey } from '../model/wallet'
 import { sem } from '../lib/format'
 
 export interface SendState {
@@ -71,9 +69,9 @@ export const rawSendActions: SendActions = {
     const key = getKey(rootState.wallet, state.selectedAccountIdx)
     successOf(rootState.info).fmap((info) => {
       fetchAccount(key.toAddressHexString())
-        .then((account) => publishTx(new semux.Transaction(
-          semux.Network[info.network],
-          semux.TransactionType.TRANSFER,
+        .then((account) => publishTx(new Transaction(
+          Network[info.network],
+          TransactionType.TRANSFER,
           hexBytes(state.to),
           state.amount,
           Long.fromString('5000000'),

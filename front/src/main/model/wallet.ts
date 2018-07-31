@@ -1,6 +1,5 @@
 import { Buffer } from 'buffer'
-import semux from 'semux'
-import Key from 'semux/dist/types/lib/Key'
+import { Key } from 'semux-js'
 import { decrypt, encrypt, randomIv, randomSalt } from '../lib/aes'
 import { Password } from '../lib/password'
 import { hexBytes } from '../lib/utils'
@@ -67,7 +66,7 @@ function throwIf(cond: boolean, msg: string) {
 
 function semuxKeyFromHex(privKeyHex: string): Key {
   const privKey = new Uint8Array(Buffer.from(privKeyHex.replace('0x', ''), 'hex'))
-  return semux.Key.importEncodedPrivateKey(privKey)
+  return Key.importEncodedPrivateKey(privKey)
 }
 
 export function createNewWallet(password: Password, network: string, privKeysHex: string[]): Wallet {
@@ -75,7 +74,7 @@ export function createNewWallet(password: Password, network: string, privKeysHex
   const iv = randomIv()
   const privKeys = privKeysHex.length > 0
     ? privKeysHex.map(semuxKeyFromHex)
-    : [ semux.Key.generateKeyPair() ]
+    : [ Key.generateKeyPair() ]
 
   const newWallet: Wallet = {
     version: 1,
@@ -117,7 +116,7 @@ export function getKey(state: WalletState, accountIdx: number): Key {
   })
   const privKeyBytes = hexBytes(privKey)
   try {
-    return semux.Key.importEncodedPrivateKey(privKeyBytes)
+    return Key.importEncodedPrivateKey(privKeyBytes)
   } catch (err) {
     throw new Error('Invalid password.')
   }

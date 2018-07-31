@@ -1,7 +1,7 @@
 import BigNumber from 'bignumber.js'
 import { Buffer } from 'buffer'
 import * as Long from 'long'
-import Transaction from 'semux/dist/types/lib/Transaction'
+import { Transaction } from 'semux-js'
 import { exec } from '../lib/api'
 import { mutableReverse } from '../lib/utils'
 import { AccountType } from './account'

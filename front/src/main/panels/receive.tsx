@@ -6,12 +6,13 @@ import {
   WebData, Success, Failure, NotAsked, Loading, isFailure, failureOf, isLoading, isSuccess, successOf, caseWebDataOf,
 } from '../lib/webdata'
 import { semNoLabel } from '../lib/format'
+import { maybe } from 'tsmonad'
 
 const FETCH_INTERVAL = 20000
 
 export interface ReceiveState {
   accounts: WebData<AccountType[]>
-  fetchTimeoutId: number | undefined
+  fetchTimeoutId: NodeJS.Timer | undefined
 }
 
 export const initialReceiveState: ReceiveState = {
@@ -33,11 +34,10 @@ export const rawReceiveActions: ReceiveActions = {
       .then((list) => actions.fetchResult(Success(list)))
       .catch((err) => actions.fetchResult(Failure(err.message)))
 
-    clearTimeout(state.fetchTimeoutId)
-    const fetchTimeoutId = setTimeout(() => actions.fetch(rootState), FETCH_INTERVAL)
+    maybe(state.fetchTimeoutId).lift(clearTimeout)
     return {
       ...state,
-      fetchTimeoutId,
+      fetchTimeoutId: setTimeout(() => actions.fetch(rootState), FETCH_INTERVAL),
       accounts: isSuccess(state.accounts) ? state.accounts : Loading,
     }
   },
@@ -45,7 +45,7 @@ export const rawReceiveActions: ReceiveActions = {
   fetchResult: (accounts) => (state) => ({ ...state, accounts }),
 
   cancelNextFetch: () => (state) => {
-    clearTimeout(state.fetchTimeoutId)
+    maybe(state.fetchTimeoutId).lift(clearTimeout)
     return { ...state, fetchTimeoutId: undefined}
   },
 }

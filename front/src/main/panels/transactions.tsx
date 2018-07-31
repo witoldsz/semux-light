@@ -4,6 +4,7 @@ import { semNoLabel, transfer } from '../lib/format'
 import { Failure, Loading, NotAsked, Success, WebData, caseWebDataOf, isSuccess, successOf } from '../lib/webdata'
 import { TransactionType, fetchPendingTxs, fetchTxs } from '../model/transaction'
 import { address1st, addresses } from '../model/wallet'
+import { maybe } from 'tsmonad'
 
 const LIST_SIZE = 200
 const FETCH_INTERVAL = 20000
@@ -11,7 +12,7 @@ const FETCH_INTERVAL = 20000
 export interface TxsState {
   selectedAddress: string
   pages: { [index: string]: Page }
-  fetchTimeoutId: number | undefined
+  fetchTimeoutId: NodeJS.Timer | undefined
 }
 
 interface Transactions {
@@ -67,11 +68,10 @@ export const rawTxsActions: TxsActions = {
       }))
       .catch((error) => actions.fetchResult({ page, result: Failure(error.message) }))
 
-    clearTimeout(state.fetchTimeoutId)
-    const fetchTimeoutId = setTimeout(() => actions.fetch({ rootState }), FETCH_INTERVAL)
+    maybe(state.fetchTimeoutId).lift(clearTimeout)
     return {
       selectedAddress: address,
-      fetchTimeoutId,
+      fetchTimeoutId: setTimeout(() => actions.fetch({ rootState }), FETCH_INTERVAL),
       pages: {
         ...state.pages,
         [page.address]: {
@@ -83,7 +83,7 @@ export const rawTxsActions: TxsActions = {
   },
 
   cancelNextFetch: () => (state) => {
-    clearTimeout(state.fetchTimeoutId)
+    maybe(state.fetchTimeoutId).lift(clearTimeout)
     return { ...state, fetchTimeoutId: undefined}
   },
 

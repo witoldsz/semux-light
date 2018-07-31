@@ -1,10 +1,9 @@
 import { h } from 'hyperapp'
 import { State, Actions } from '../app'
-import BigNumber from 'bignumber.js'
 import { ZERO, concat, mutableReverse } from '../lib/utils'
 import { BlockType, fetchLatestBlock } from '../model/block'
 import { AccountType, fetchAccount } from '../model/account'
-import { Maybe } from 'tsmonad'
+import { Maybe, maybe } from 'tsmonad'
 import { fetchLastTxs, TransactionType, caseTypeOf } from '../model/transaction'
 import { localeDateTime, transfer, sem, addressAbbr } from '../lib/format'
 import { addresses, address1st } from '../model/wallet'
@@ -17,7 +16,7 @@ export interface HomeState {
   block: Maybe<BlockType>
   accounts: AccountType[]
   transactions: TransactionType[]
-  fetchTimeoutId: number | undefined
+  fetchTimeoutId: NodeJS.Timer | undefined
 }
 
 export const initialHomeState: HomeState = {
@@ -55,13 +54,16 @@ export const rawHomeActions: HomeActions = {
       .then(actions.fetchAccountsResponse)
       .catch(actions.fetchError)
 
-    const fetchTimeoutId = setTimeout(() => actions.fetch(rootState), FETCH_INTERVAL)
-
-    return { ...state, fetchTimeoutId, errorMessage: '' }
+    maybe(state.fetchTimeoutId).lift(clearTimeout)
+    return {
+      ...state,
+      fetchTimeoutId: setTimeout(() => actions.fetch(rootState), FETCH_INTERVAL),
+      errorMessage: '',
+    }
   },
 
   cancelNextFetch: () => (state) => {
-    clearTimeout(state.fetchTimeoutId)
+    maybe(state.fetchTimeoutId).lift(clearTimeout)
     return { ...state, fetchTimeoutId: undefined }
   },
 

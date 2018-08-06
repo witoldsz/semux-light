@@ -11,12 +11,13 @@ import { publishTx } from '../model/transaction'
 import { fetchAccount, AccountType } from '../model/account'
 import { addresses, getKey } from '../model/wallet'
 import { sem } from '../lib/format'
+import BigNumber from 'bignumber.js'
 
 export interface SendState {
   accounts: WebData<AccountType[]>
   selectedAccountIdx: number
   to: string
-  amount: Long
+  amount: string
   data: string
   submit: WebData<{}>
 }
@@ -25,7 +26,7 @@ export const initialSendState: SendState = {
   accounts: NotAsked,
   selectedAccountIdx: 0,
   to: '',
-  amount: Long.ZERO,
+  amount: '0',
   data: '',
   submit: NotAsked,
 }
@@ -58,11 +59,7 @@ export const rawSendActions: SendActions = {
   from: (idx) => (state) => ({ ...state, selectedAccountIdx: idx }),
 
   to: (to) => (state) => ({ ...state, to }),
-  amount: (amount) => (state) => ({
-    ...state,
-    amount: Long.fromString(amount).multiply(1e9),
-  }),
-
+  amount: (amount) => (state) => ({ ...state, amount }),
   data: (data) => (state) => ({ ...state, data }),
 
   submit: (rootState) => (state, actions) => {
@@ -73,7 +70,7 @@ export const rawSendActions: SendActions = {
           Network[info.network],
           TransactionType.TRANSFER,
           hexBytes(state.to),
-          state.amount,
+          Long.fromString(new BigNumber(state.amount).times(1e9).toString()),
           Long.fromString('5000000'),
           Long.fromNumber(account.nonce),
           Long.fromNumber(Date.now()),

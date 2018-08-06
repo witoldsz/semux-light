@@ -39,6 +39,7 @@ export interface DelegatesState {
   voteAmount: string
   selectedDelegate: string
   voteResult: WebData<undefined>
+  searchPhrase: string
 }
 
 export const blankDelegates: DelegatesState = {
@@ -48,6 +49,7 @@ export const blankDelegates: DelegatesState = {
   voteAmount: '',
   selectedDelegate: '',
   voteResult: NotAsked,
+  searchPhrase: '',
 }
 
 export interface DelegatesActions {
@@ -59,6 +61,7 @@ export interface DelegatesActions {
   voteAmount: (a: string) => (s: DelegatesState) => DelegatesState
   vote: (s: { rootState: State, type: 'VOTE' | 'UNVOTE' }) => (s: DelegatesState, a: DelegatesActions) => DelegatesState
   voteResult: (w: WebData<undefined>) => (s: DelegatesState, a: DelegatesActions) => DelegatesState
+  searchInput: (d: string) => (s: DelegatesState, a: DelegatesActions) => DelegatesState
 }
 
 export const rawDelegatesActions: DelegatesActions = {
@@ -86,7 +89,7 @@ export const rawDelegatesActions: DelegatesActions = {
 
   cancelNextFetch: () => (state) => {
     maybe(state.fetchTimeoutId).lift(clearTimeout)
-    return { ...state, fetchTimeoutId: undefined}
+    return { ...state, fetchTimeoutId: undefined }
   },
 
   fetchResponse: ((remoteDataResponse) => (state) => ({
@@ -131,6 +134,8 @@ export const rawDelegatesActions: DelegatesActions = {
   },
 
   voteResult: (voteResult) => (state, actions) => ({ ...state, voteResult }),
+
+  searchInput: (searchPhrase) => (state, actions) => ({ ...state, searchPhrase }),
 }
 
 export function DelegatesView(rootState: State, rootActions: Actions) {
@@ -143,10 +148,13 @@ export function DelegatesView(rootState: State, rootActions: Actions) {
     ondestroy={() => actions.cancelNextFetch()}
   >
     {caseWebDataOf(state.remoteData, {
-      notAsked: () => <div />,
+      notAsked: () => <div/>,
       loading: () => <div>Loading…</div>,
       success: (remoteData) => <div>
-        {voteForm(rootState, remoteData, state, actions)}
+        <div class="flex flex-wrap mw7-l mb2">
+          {voteForm(rootState, remoteData, state, actions)}
+          {searchForm(state, actions)}
+        </div>
         {table(remoteData, state, actions)}
       </div>,
       failure: (message) => <div class="dark-red">{message}</div>,
@@ -154,105 +162,139 @@ export function DelegatesView(rootState: State, rootActions: Actions) {
   </div>
 }
 
+function searchForm(state: DelegatesState, actions: DelegatesActions) {
+  return <form class={formStyles.form}>
+    <div class={`${formStyles.row} pl6-ns`}>
+      <label class={formStyles.label} for="account-select">Search delegate:</label>
+      <div class={formStyles.field}>
+        <input
+          type="text"
+          value={state.searchPhrase}
+          onkeyup={(e) => actions.searchInput(e.target.value)}
+          class={formStyles.fieldInput}
+          style={{
+            flex: 1,
+          }}
+        />
+        <button type="button" onclick={() => actions.searchInput('')}>Clear</button>
+      </div>
+    </div>
+  </form>
+}
+
 function voteForm(rootState: State, remoteData: RemoteData, state: DelegatesState, actions: DelegatesActions) {
   const disabled = !state.selectedDelegate || isLoading(state.voteResult)
   const noAmount = !voteAmount(state).gt(0)
-  return <table class="mv3 dib lh-copy">
-    <tr>
-      <td class="tr"><label class="fw7 f6">Address:</label></td>
-      <td>
+
+  return <form class={formStyles.form}>
+    <div class={formStyles.row}>
+      <label class={formStyles.label} for="account-select">Address:</label>
+      <div class={formStyles.field}>
         <select
-          class="f6 h2"
+          id="account-select"
+          class="f6 h2 w-100"
           onchange={(e) => actions.selectedAccountIdx(parseInt(e.target.value, 10))}
         >
-          {
-            remoteData.accounts.map((acc, idx) => (
-              <option selected={remoteData.accounts.indexOf(acc) === state.selectedAccountIdx} value={idx}>
-                {acc.address}, {sem(acc.available)}
-              </option>
-            ))
-          }
+          {remoteData.accounts.map((acc, idx) => (
+            <option selected={remoteData.accounts.indexOf(acc) === state.selectedAccountIdx} value={idx}>
+              {acc.address}, {sem(acc.available)}
+            </option>
+          ))}
         </select>
-      </td>
-    </tr>
-    <tr>
-      <td class="tr"><label class="fw7 f6">Selected:</label></td>
-      <td>{delegateAbbr(remoteData.delegates, state.selectedDelegate)}</td>
-    </tr>
-    <tr>
-      <td class="tr"><label class="fw7 f6">Action:</label></td>
-      <td>
+      </div>
+    </div>
+    <div class={formStyles.row}>
+      <label class={formStyles.label} for="password">Selected:</label>
+      <div class={`${formStyles.field} pt1`}>
+        {delegateAbbr(remoteData.delegates, state.selectedDelegate) || '---'}
+      </div>
+    </div>
+    <div class={formStyles.row}>
+      <label class={formStyles.label} for="password">Action:</label>
+      <div class={formStyles.field}>
         <input
           type="text"
           value={state.voteAmount ? state.voteAmount.toString() : undefined}
           oninput={(evt) => actions.voteAmount(evt.target.value)}
           placeholder={maxVote(state).toString()}
           disabled={disabled}
+          class={formStyles.fieldInput}
+          style={{
+            flex: 1,
+          }}
         />
         <button
+          type="button"
           disabled={disabled || noAmount}
           onclick={() => actions.vote({ rootState, type: 'VOTE' })}
         >
           Vote
         </button>
         <button
+          type="button"
           disabled={disabled || noAmount}
           onclick={() => actions.vote({ rootState, type: 'UNVOTE' })}
         >
           Unvote
         </button>
+      </div>
+      <div>
         <span class="dark-red">{failureOf(state.voteResult)}</span>
         <span class="green">{isSuccess(state.voteResult) ? 'OK' : ''}</span>
-      </td>
-    </tr>
-  </table>
+      </div>
+    </div>
+  </form>
 }
 
 function table(remoteData: RemoteData, state: DelegatesState, actions: DelegatesActions) {
-  return <div class="">
-    <table class="f6 mw8" cellspacing="0">
+  return <div class="w-100 mw7-l">
+    <table class="f6 w-100" cellspacing="0">
       <thead>
-        <tr>
-          <th class="fw6 bb b--black-20 tl pb1 pr2 pl2">Rank</th>
-          <th class="fw6 bb b--black-20 tl pb1 pr2 pl2">Name</th>
-          <th class="fw6 bb b--black-20 tl pb1 pr2 pl2">Address</th>
-          <th class="fw6 bb b--black-20 tl pb1 pr2 pl2 tr">Votes</th>
-          <th class="fw6 bb b--black-20 tl pb1 pr2 pl2 tr">Votes from Me</th>
-          <th class="fw6 bb b--black-20 tl pb1 pr2 pl2">Status</th>
-          <th class="fw6 bb b--black-20 tl pb1 pr2 pl2 tr">Rate</th>
-        </tr>
+      <tr>
+        <th class="fw6 bb b--black-20 tl pb1 pr2 pl2">Rank</th>
+        <th class="fw6 bb b--black-20 tl pb1 pr2 pl2">Name</th>
+        <th class="fw6 bb b--black-20 tl pb1 pr2 pl2">Address</th>
+        <th class="fw6 bb b--black-20 tl pb1 pr2 pl2 tr">Votes</th>
+        <th class="fw6 bb b--black-20 tl pb1 pr2 pl2 tr">Votes from Me</th>
+        <th class="fw6 bb b--black-20 tl pb1 pr2 pl2">Status</th>
+        <th class="fw6 bb b--black-20 tl pb1 pr2 pl2 tr">Rate</th>
+      </tr>
       </thead>
       <tbody class="lh-copy">
-        {
-          remoteData.delegates.map((delegate) => {
-            const myVotes = myVotesForDelegate(remoteData, state, delegate.address)
-            const selected = delegate.address === state.selectedDelegate
-            return <tr
-              class={`${selected ? 'bg-lightest-blue ' : 'hover-bg-washed-blue'} pointer`}
-              onclick={() => actions.selectDelegate(delegate.address)}
+      {
+        filterDelegates(remoteData.delegates, state.searchPhrase).map((delegate) => {
+          const myVotes = myVotesForDelegate(remoteData, state, delegate.address)
+          const selected = delegate.address === state.selectedDelegate
+          return <tr
+            class={`${selected ? 'bg-lightest-blue ' : 'hover-bg-washed-blue'} pointer`}
+            onclick={() => actions.selectDelegate(delegate.address)}
+          >
+            <td class="pv1 pr2 pl2 bb bl b--black-20">{delegate.rank}</td>
+            <td class="pv1 pr2 pl2 bb bl b--black-20">{delegate.name}</td>
+            <td class="pv1 pr2 pl2 bb bl b--black-20">{addressAbbr(delegate.address)}</td>
+            <td class="pv1 pr2 pl2 bb bl b--black-20 tr">
+              {semNoLabel(delegate.votes)}
+            </td>
+            <td
+              class={`pv1 pr2 pl2 bb bl b--black-20 tr ${myVotes.gt(0) ? 'underline' : ''}`}
+              onclick={() => myVotes.gt(0) && actions.voteAmount(myVotes.toString())}
             >
-              <td class="pv1 pr2 pl2 bb bl b--black-20">{delegate.rank}</td>
-              <td class="pv1 pr2 pl2 bb bl b--black-20">{delegate.name}</td>
-              <td class="pv1 pr2 pl2 bb bl b--black-20">{addressAbbr(delegate.address)}</td>
-              <td class="pv1 pr2 pl2 bb bl b--black-20 tr">
-                {semNoLabel(delegate.votes)}
-              </td>
-              <td
-                class={`pv1 pr2 pl2 bb bl b--black-20 tr ${myVotes.gt(0) ? 'underline' : ''}`}
-                onclick={() => myVotes.gt(0) && actions.voteAmount(myVotes.toString())}
-              >
-                {semNoLabel(myVotes)}
-              </td>
-              <td class="pv1 pr2 pl2 bb bl b--black-20">
-                {delegate.validator ? 'Validator' : 'Delegate'}
-              </td>
-              <td class="pv1 pr2 pl2 bb bl br b--black-20 tr">{delegate.rate.toFixed(1)} %</td>
-            </tr>
-          })
-        }
+              {semNoLabel(myVotes)}
+            </td>
+            <td class="pv1 pr2 pl2 bb bl b--black-20">
+              {delegate.validator ? 'Validator' : 'Delegate'}
+            </td>
+            <td class="pv1 pr2 pl2 bb bl br b--black-20 tr">{delegate.rate.toFixed(1)} %</td>
+          </tr>
+        })
+      }
       </tbody>
     </table>
   </div>
+}
+
+function filterDelegates(delegates: DelegateType[], searchPhrase: string) {
+  return delegates.filter(({ name }) => name.toLowerCase().includes(searchPhrase.toLowerCase()))
 }
 
 function myVotesKey(myAddress: string, delegate: string): string {
@@ -278,4 +320,12 @@ function maxVote(state: DelegatesState): BigNumber {
 
 function voteAmount(state: DelegatesState): BigNumber {
   return state.voteAmount ? new BigNumber(state.voteAmount) : maxVote(state)
+}
+
+const formStyles = {
+  form: 'w-100',
+  row: 'w-100 relative pl5-ns mv1',
+  field: 'w-100 h2 flex pl1-ns',
+  fieldInput: 'w-100 pa1',
+  label: 'dib fw6 f6 static absolute-ns left-0 pt1-ns',
 }

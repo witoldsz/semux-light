@@ -7,7 +7,7 @@ import { InfoState, fetchInfo } from './model/info'
 import { WalletState } from './model/wallet'
 import {initialNavigationState, Nav, NavigationActions, NavigationState, NavView, rawNavigationActions} from './nav'
 import {
-  DelegatesActions, DelegatesState, DelegatesView, blankDelegates, rawDelegatesActions,
+  DelegatesActions, DelegatesState, DelegatesView, initialDelegatesState, rawDelegatesActions,
 } from './panels/delegates'
 import { HomeActions, HomeState, HomeView, initialHomeState, rawHomeActions } from './panels/home'
 import { ReceiveActions, ReceiveState, ReceiveView, initialReceiveState, rawReceiveActions } from './panels/receive'
@@ -42,7 +42,7 @@ function initialState(): State {
     send: initialSendState,
     receive: initialReceiveState,
     transactions: initialTxsState,
-    delegates: blankDelegates,
+    delegates: initialDelegatesState,
   }
 }
 

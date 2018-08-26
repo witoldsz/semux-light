@@ -6,6 +6,9 @@ import { exec } from '../lib/api'
 import { mutableReverse } from '../lib/utils'
 import { AccountType } from './account'
 
+export const TX_FEE_NANO = Long.fromNumber(5e6)
+export const TX_FEE_SEM = new BigNumber(TX_FEE_NANO.toNumber()).div(1e9)
+
 export interface TransactionTypeRemote {
   blockNumber: string
   hash: string

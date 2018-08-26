@@ -7,7 +7,7 @@ import {
 import { Network, Transaction, TransactionType } from 'semux-js'
 import * as Long from 'long'
 import { hexBytes, log } from '../lib/utils'
-import { publishTx } from '../model/transaction'
+import { publishTx, TX_FEE_NANO } from '../model/transaction'
 import { fetchAccount, AccountType } from '../model/account'
 import { addresses, getKey } from '../model/wallet'
 import { sem } from '../lib/format'
@@ -19,14 +19,14 @@ export interface SendState {
   to: string
   amount: string
   data: string
-  submit: WebData<{}>
+  submit: WebData<undefined>
 }
 
 export const initialSendState: SendState = {
   accounts: NotAsked,
   selectedAccountIdx: 0,
   to: '',
-  amount: '0',
+  amount: '',
   data: '',
   submit: NotAsked,
 }
@@ -39,7 +39,8 @@ export interface SendActions {
   amount: (val: string) => (s: SendState) => SendState
   data: (val: string) => (s: SendState) => SendState
   submit: (s: State) => (s: SendState, a: SendActions) => SendState
-  submitResponse: (r: WebData<{}>) => (s: SendState) => SendState
+  submitResponseOk: () => (s: SendState) => SendState
+  submitResponseFailed: (err: string) => (s: SendState) => SendState
 }
 
 export const rawSendActions: SendActions = {
@@ -64,29 +65,41 @@ export const rawSendActions: SendActions = {
 
   submit: (rootState) => (state, actions) => {
     const key = getKey(rootState.wallet, state.selectedAccountIdx)
-    successOf(rootState.info).fmap((info) => {
-      fetchAccount(key.toAddressHexString())
-        .then((account) => publishTx(new Transaction(
-          Network[info.network],
-          TransactionType.TRANSFER,
-          hexBytes(state.to),
-          Long.fromString(new BigNumber(state.amount).times(1e9).toString()),
-          Long.fromString('5000000'),
-          Long.fromNumber(account.nonce),
-          Long.fromNumber(Date.now()),
-          Buffer.from(state.data, 'utf-8'),
-        ).sign(key)))
-        .then(() => actions.submitResponse(NotAsked))
-        .catch((e) => actions.submitResponse(Failure(e.message)))
-    })
-
-    return {
-      ...state,
-      submit: Loading,
+    const amount = new BigNumber(state.amount)
+    const confirmed = window.confirm(
+      `Are you sure you want to transfer ${sem(amount)} to ${state.to}?`,
+    )
+    if (confirmed) {
+      successOf(rootState.info).fmap((info) => {
+        fetchAccount(key.toAddressHexString())
+          .then((account) => publishTx(new Transaction(
+            Network[info.network],
+            TransactionType.TRANSFER,
+            hexBytes(state.to),
+            Long.fromString(amount.times(1e9).toString()),
+            TX_FEE_NANO,
+            Long.fromNumber(account.nonce),
+            Long.fromNumber(Date.now()),
+            Buffer.from(state.data, 'utf-8'),
+          ).sign(key)))
+          .then(() => actions.submitResponseOk())
+          .catch((e) => actions.submitResponseFailed(e.message))
+      })
+      return { ...state, submit: Loading }
+    } else {
+      return state
     }
   },
-  submitResponse: (response) => (state) => {
-    return { ...state, submit: response }
+
+  submitResponseOk: () => (state) => {
+    window.alert(`The transfer is pending network verification. See "Transactions" tab for status update.`)
+    const { to, amount, data } = initialSendState
+    return { ...state, to, amount, data, submit: Success(undefined) }
+  },
+
+  submitResponseFailed: (err) => (state) => {
+    window.alert(err)
+    return { ...state, submit: Failure(err) }
   },
 }
 
@@ -137,6 +150,7 @@ export function SendView(rootState: State, rootActions: Actions) {
           class="db w-100 pa2 br2 b--black-20 ba f6"
           id="toInput"
           placeholder="0x…"
+          value={state.to}
           oninput={(evt) => actions.to(evt.target.value)}
         />
       </div>
@@ -148,6 +162,7 @@ export function SendView(rootState: State, rootActions: Actions) {
           type="text"
           class="db pa2 br2 b--black-20 ba f6"
           placeholder="SEM"
+          value={state.amount}
           oninput={(evt) => actions.amount(evt.target.value)}
         />
       </div>
@@ -159,6 +174,7 @@ export function SendView(rootState: State, rootActions: Actions) {
           type="text"
           class="db w-100 pa2 br2 b--black-20 ba f6"
           placeholder="Text (UTF-8)"
+          value={state.data}
           oninput={(evt) => actions.data(evt.target.value.trim())}
         />
       </div>

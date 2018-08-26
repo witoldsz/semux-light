@@ -11,13 +11,12 @@ import {
 } from '../lib/webdata'
 import { AccountType, fetchAccount } from '../model/account'
 import { DelegateType, fetchDelegates } from '../model/delegate'
-import { publishTx } from '../model/transaction'
+import { publishTx, TX_FEE_NANO, TX_FEE_SEM } from '../model/transaction'
 import { AccountVoteType, fetchVotes } from '../model/vote'
 import { addresses, getKey } from '../model/wallet'
 import { maybe } from 'tsmonad'
 
 const FETCH_INTERVAL = 20000
-const TX_FEE = new BigNumber('0.005')
 
 interface RemoteDataResponse {
   accounts: AccountType[]
@@ -42,7 +41,7 @@ export interface DelegatesState {
   searchPhrase: string
 }
 
-export const blankDelegates: DelegatesState = {
+export const initialDelegatesState: DelegatesState = {
   remoteData: NotAsked,
   fetchTimeoutId: undefined,
   selectedAccountIdx: 0,
@@ -60,7 +59,8 @@ export interface DelegatesActions {
   selectDelegate: (d: string) => (s: DelegatesState, a: DelegatesActions) => DelegatesState
   voteAmount: (a: string) => (s: DelegatesState) => DelegatesState
   vote: (s: { rootState: State, type: 'VOTE' | 'UNVOTE' }) => (s: DelegatesState, a: DelegatesActions) => DelegatesState
-  voteResult: (w: WebData<undefined>) => (s: DelegatesState, a: DelegatesActions) => DelegatesState
+  voteResultOk: () => (s: DelegatesState) => DelegatesState
+  voteResultFailed: (err: string) => (s: DelegatesState) => DelegatesState
   searchInput: (d: string) => (s: DelegatesState, a: DelegatesActions) => DelegatesState
 }
 
@@ -115,25 +115,45 @@ export const rawDelegatesActions: DelegatesActions = {
 
   vote: ({ rootState, type }) => (state, actions) => {
     const key = getKey(rootState.wallet, state.selectedAccountIdx)
-    successOf(rootState.info).fmap((info) => {
-      fetchAccount(key.toAddressHexString())
-        .then((account) => publishTx(new Transaction(
-          Network[info.network],
-          TransactionType[type],
-          hexBytes(state.selectedDelegate),
-          Long.fromString(voteAmount(state).times(1e9).toString()),
-          Long.fromString(TX_FEE.times(1e9).toString()),
-          Long.fromNumber(account.nonce),
-          Long.fromNumber(Date.now()),
-          Buffer.from(''),
-        ).sign(key)))
-        .then(() => actions.voteResult(Success(undefined)))
-        .catch((e) => actions.voteResult(Failure(e.message)))
-    })
-    return { ...state, voteResult: Loading }
+    const amount = voteAmount(state)
+    const confirmed = window.confirm(
+      `Are you sure you want to ${type.toLowerCase()} ${sem(amount)} for ${addressAbbr(state.selectedDelegate)}?`,
+    )
+    if (confirmed) {
+      successOf(rootState.info).fmap((info) => {
+        fetchAccount(key.toAddressHexString())
+          .then((account) => publishTx(new Transaction(
+            Network[info.network],
+            TransactionType[type],
+            hexBytes(state.selectedDelegate),
+            Long.fromString(amount.times(1e9).toString()),
+            TX_FEE_NANO,
+            Long.fromNumber(account.nonce),
+            Long.fromNumber(Date.now()),
+            Buffer.from(''),
+          ).sign(key)))
+          .then(() => actions.voteResultOk())
+          .catch((e) => actions.voteResultFailed(e.message))
+      })
+      return { ...state, voteResult: Loading }
+    } else {
+      return state
+    }
   },
 
-  voteResult: (voteResult) => (state, actions) => ({ ...state, voteResult }),
+  voteResultOk: () => (state) => {
+    window.alert(`The operation is pending network verification. See "Transactions" tab for status update.`)
+    return {
+      ...state,
+      voteAmount: initialDelegatesState.voteAmount,
+      voteResult: Success(undefined),
+    }
+  },
+
+  voteResultFailed: (err) => (state) => {
+    window.alert(err)
+    return { ...state, voteResult: Failure(err) }
+  },
 
   searchInput: (searchPhrase) => (state, actions) => ({ ...state, searchPhrase }),
 }
@@ -240,7 +260,6 @@ function voteForm(rootState: State, remoteData: RemoteData, state: DelegatesStat
       </div>
       <div>
         <span class="dark-red">{failureOf(state.voteResult)}</span>
-        <span class="green">{isSuccess(state.voteResult) ? 'OK' : ''}</span>
       </div>
     </div>
   </form>
@@ -314,7 +333,7 @@ function delegateAbbr(list: DelegateType[], selectedDelegate) {
 function maxVote(state: DelegatesState): BigNumber {
   return successOf(state.remoteData)
     .fmap(({ accounts }) => accounts[state.selectedAccountIdx])
-    .fmap(({ available }) => BigNumber.max(0, available.minus(TX_FEE.times(2))))
+    .fmap(({ available }) => BigNumber.max(0, available.minus(TX_FEE_SEM.times(2))))
     .valueOr(ZERO)
 }
 

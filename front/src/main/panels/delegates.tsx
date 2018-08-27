@@ -285,7 +285,11 @@ function table(remoteData: RemoteData, state: DelegatesState, actions: Delegates
           const myVotes = myVotesForDelegate(remoteData, state, delegate.address)
           const selected = delegate.address === state.selectedDelegate
           return <tr
-            class={`${selected ? 'bg-lightest-blue ' : 'hover-bg-washed-blue'} pointer`}
+            class={[
+              'pointer',
+              selected ? 'bg-lightest-blue ' : 'hover-bg-washed-blue',
+              myVotes.gt(0) ? 'b' : '',
+            ].join(' ')}
             onclick={() => actions.selectDelegate(delegate.address)}
           >
             <td class="pv1 pr2 pl2 bb bl b--black-20">{delegate.rank}</td>

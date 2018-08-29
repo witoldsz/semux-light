@@ -31,6 +31,9 @@ interface RemoteData {
   names: Map<string, string>
 }
 
+type OrderBy = 'Rank' | 'Name' | 'Address' | 'Votes' | 'MyVotes'
+type OrderDir = 'Asc' | 'Desc'
+
 export interface DelegatesState {
   remoteData: WebData<RemoteData>
   fetchTimeoutId: NodeJS.Timer | undefined
@@ -39,6 +42,8 @@ export interface DelegatesState {
   selectedDelegate: string
   voteResult: WebData<undefined>
   searchPhrase: string
+  orderBy: OrderBy
+  orderDir: OrderDir
 }
 
 export const initialDelegatesState: DelegatesState = {
@@ -49,6 +54,8 @@ export const initialDelegatesState: DelegatesState = {
   selectedDelegate: '',
   voteResult: NotAsked,
   searchPhrase: '',
+  orderBy: 'Rank',
+  orderDir: 'Asc',
 }
 
 export interface DelegatesActions {
@@ -62,6 +69,7 @@ export interface DelegatesActions {
   voteResultOk: () => (s: DelegatesState) => DelegatesState
   voteResultFailed: (err: string) => (s: DelegatesState) => DelegatesState
   searchInput: (d: string) => (s: DelegatesState, a: DelegatesActions) => DelegatesState
+  orderBy: (o: OrderBy) => (s: DelegatesState) => DelegatesState
 }
 
 export const rawDelegatesActions: DelegatesActions = {
@@ -156,6 +164,12 @@ export const rawDelegatesActions: DelegatesActions = {
   },
 
   searchInput: (searchPhrase) => (state, actions) => ({ ...state, searchPhrase }),
+
+  orderBy: (orderBy) => (state) => ({
+    ...state,
+    orderBy,
+    orderDir: orderBy === state.orderBy && state.orderDir === 'Asc' ? 'Desc' : 'Asc',
+  }),
 }
 
 export function DelegatesView(rootState: State, rootActions: Actions) {
@@ -212,12 +226,12 @@ function voteForm(rootState: State, remoteData: RemoteData, state: DelegatesStat
       <div class={formStyles.field}>
         <select
           id="account-select"
-          class="f6 h2 w-100"
+          class="f6 h2"
           onchange={(e) => actions.selectedAccountIdx(parseInt(e.target.value, 10))}
         >
           {remoteData.accounts.map((acc, idx) => (
             <option selected={remoteData.accounts.indexOf(acc) === state.selectedAccountIdx} value={idx}>
-              {acc.address}, {sem(acc.available)}
+              {addressAbbr(acc.address)}, {sem(acc.available)}
             </option>
           ))}
         </select>
@@ -266,22 +280,65 @@ function voteForm(rootState: State, remoteData: RemoteData, state: DelegatesStat
 }
 
 function table(remoteData: RemoteData, state: DelegatesState, actions: DelegatesActions) {
+  function headerCell(text: string, orderBy?: OrderBy, css?: string) {
+    return <th
+      onclick={() => orderBy && actions.orderBy(orderBy)}
+      class={`bb b--black-20 tl pb1 pr2 pl2 ${css || ''}`}
+    >
+      {text}
+      {orderBy
+        ? (state.orderBy === orderBy ? (state.orderDir === 'Asc' ? '⯅' : '⯆') : '⬦')
+        : ''
+      }
+    </th>
+  }
+
+  function filterDelegates(delegates: DelegateType[]) {
+    const { searchPhrase } = state
+    return searchPhrase
+      ? delegates.filter(({ name }) => name.toLowerCase().includes(searchPhrase.toLowerCase()))
+      : delegates
+  }
+
+  function sortDelegates(delegates: DelegateType[]) {
+    const { orderBy, orderDir } = state
+    const dir = (cmp: number) => state.orderDir === 'Asc' ? cmp : -cmp
+    const cmpFn = (a: DelegateType, b: DelegateType) => {
+      switch (orderBy) {
+        case 'Rank': return a.rank - b.rank
+        case 'Name': return a.name.localeCompare(b.name)
+        case 'Address': return a.address.localeCompare(b.address)
+        case 'Votes': return a.votes.comparedTo(b.votes)
+        case 'MyVotes': {
+          const myVotesA = myVotesForDelegate(remoteData, state, a.address)
+          const myVotesB = myVotesForDelegate(remoteData, state, b.address)
+          return myVotesA.comparedTo(myVotesB)
+        }
+      }
+    }
+    const byRankWhenEq = (a: DelegateType, b: DelegateType, cmp: number) => {
+      return cmp === 0 ? a.rank - b.rank : cmp
+    }
+    return orderBy === 'Rank' && orderDir === 'Asc'
+      ? delegates
+      : Array.from(delegates).sort((a, b) => byRankWhenEq(a, b, dir(cmpFn(a, b))))
+  }
+
   return <div class="w-100 mw7-l">
     <table class="f6 w-100" cellspacing="0">
       <thead>
-      <tr>
-        <th class="fw6 bb b--black-20 tl pb1 pr2 pl2">Rank</th>
-        <th class="fw6 bb b--black-20 tl pb1 pr2 pl2">Name</th>
-        <th class="fw6 bb b--black-20 tl pb1 pr2 pl2">Address</th>
-        <th class="fw6 bb b--black-20 tl pb1 pr2 pl2 tr">Votes</th>
-        <th class="fw6 bb b--black-20 tl pb1 pr2 pl2 tr">Votes from Me</th>
-        <th class="fw6 bb b--black-20 tl pb1 pr2 pl2">Status</th>
-        <th class="fw6 bb b--black-20 tl pb1 pr2 pl2 tr">Rate</th>
+      <tr class="fw6 pointer">
+        {headerCell('Rank', 'Rank')}
+        {headerCell('Name', 'Name')}
+        {headerCell('Address', 'Address')}
+        {headerCell('Votes', 'Votes', 'tr')}
+        {headerCell('My votes', 'MyVotes', 'tr')}
+        {headerCell('Status')}
       </tr>
       </thead>
       <tbody class="lh-copy">
       {
-        filterDelegates(remoteData.delegates, state.searchPhrase).map((delegate) => {
+        sortDelegates(filterDelegates(remoteData.delegates)).map((delegate) => {
           const myVotes = myVotesForDelegate(remoteData, state, delegate.address)
           const selected = delegate.address === state.selectedDelegate
           return <tr
@@ -304,20 +361,15 @@ function table(remoteData: RemoteData, state: DelegatesState, actions: Delegates
             >
               {semNoLabel(myVotes)}
             </td>
-            <td class="pv1 pr2 pl2 bb bl b--black-20">
+            <td class="pv1 pr2 pl2 bb bl br b--black-20">
               {delegate.validator ? 'Validator' : 'Delegate'}
             </td>
-            <td class="pv1 pr2 pl2 bb bl br b--black-20 tr">{delegate.rate.toFixed(1)} %</td>
           </tr>
         })
       }
       </tbody>
     </table>
   </div>
-}
-
-function filterDelegates(delegates: DelegateType[], searchPhrase: string) {
-  return delegates.filter(({ name }) => name.toLowerCase().includes(searchPhrase.toLowerCase()))
 }
 
 function myVotesKey(myAddress: string, delegate: string): string {

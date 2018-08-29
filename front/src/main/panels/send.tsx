@@ -10,7 +10,7 @@ import { hexBytes, log } from '../lib/utils'
 import { publishTx, TX_FEE_NANO } from '../model/transaction'
 import { fetchAccount, AccountType } from '../model/account'
 import { addresses, getKey } from '../model/wallet'
-import { sem } from '../lib/format'
+import { sem, addressAbbr } from '../lib/format'
 import BigNumber from 'bignumber.js'
 
 export interface SendState {
@@ -134,7 +134,7 @@ export function SendView(rootState: State, rootActions: Actions) {
             {
               accounts.map((acc, idx) => (
                 <option selected={accounts.indexOf(acc) === state.selectedAccountIdx} value={idx}>
-                  {acc.address}, {sem(acc.available)}
+                  {addressAbbr(acc.address)}, {sem(acc.available)}
                 </option>
               ))
             }

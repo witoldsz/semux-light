@@ -36,7 +36,7 @@ type OrderDir = 'Asc' | 'Desc'
 
 export interface DelegatesState {
   remoteData: WebData<RemoteData>
-  fetchTimeoutId: NodeJS.Timer | undefined
+  fetchTimeoutId: any
   selectedAccountIdx: number
   voteAmount: string
   selectedDelegate: string

@@ -68,7 +68,7 @@ export function publishTx(tx: Transaction): Promise<undefined> {
 
 export async function fetchTxs(address: string, from: number, to: number): Promise<TransactionType[]> {
   const path = `/v2.1.0/account/transactions?address=${address}&from=${from}&to=${to}`
-  const remotes = await exec<TransactionTypeRemote[]>('GET', path)
+  const remotes = to > from ? await exec<TransactionTypeRemote[]>('GET', path) : []
   return mutableReverse(remotes.map((r, idx) => ({
     blockNumber: r.blockNumber,
     hash: r.hash,
@@ -86,9 +86,7 @@ export async function fetchTxs(address: string, from: number, to: number): Promi
 export async function fetchLastTxs(account: AccountType, { page, size }: { page: number, size: number }) {
   const to = account.transactionCount - size * page
   const from = Math.max(0, to - size)
-  return to > from
-    ? fetchTxs(account.address, from, to)
-    : []
+  return fetchTxs(account.address, from, to)
 }
 
 export async function fetchPendingTxs(address: string): Promise<TransactionType[]> {

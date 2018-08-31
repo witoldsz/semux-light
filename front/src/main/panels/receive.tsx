@@ -12,7 +12,7 @@ const FETCH_INTERVAL = 20000
 
 export interface ReceiveState {
   accounts: WebData<AccountType[]>
-  fetchTimeoutId: NodeJS.Timer | undefined
+  fetchTimeoutId: any
 }
 
 export const initialReceiveState: ReceiveState = {

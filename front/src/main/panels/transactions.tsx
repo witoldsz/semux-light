@@ -5,6 +5,8 @@ import { Failure, Loading, NotAsked, Success, WebData, caseWebDataOf, isSuccess,
 import { TransactionType, fetchPendingTxs, fetchTxs } from '../model/transaction'
 import { address1st, addresses } from '../model/wallet'
 import { maybe } from 'tsmonad'
+import { calculateRange, PageRange } from '../lib/pagination'
+import { fetchAccount } from '../model/account'
 
 const LIST_SIZE = 200
 const FETCH_INTERVAL = 20000
@@ -12,18 +14,20 @@ const FETCH_INTERVAL = 20000
 export interface TxsState {
   selectedAddress: string
   pages: { [index: string]: Page }
-  fetchTimeoutId: NodeJS.Timer | undefined
+  fetchTimeoutId: any
 }
 
 interface Transactions {
-  pending: TransactionType[],
-  completed: TransactionType[],
+  pending: TransactionType[]
+  completed: TransactionType[]
+  pageRange: PageRange
 }
 
 interface Page {
   address: string
   from: number
   to: number
+  pageNumber: number
   transactions: WebData<Transactions>
 }
 
@@ -32,6 +36,7 @@ function blankPage(address: string): Page {
     address,
     from: 0,
     to: LIST_SIZE,
+    pageNumber: 0,
     transactions: NotAsked,
   }
 }
@@ -61,10 +66,23 @@ export const rawTxsActions: TxsActions = {
       return state
     }
     const page = pageOf(state, address)
-    Promise.all([fetchPendingTxs(address), fetchTxs(address, page.from, page.from + LIST_SIZE)])
-      .then(([pending, completed]) => actions.fetchResult({
+
+    async function fetchCompleted() {
+      const totalCount = await fetchAccount(address).then((acc) => acc.transactionCount)
+      const pageRange = calculateRange({
+        totalCount,
+        pageSize: LIST_SIZE,
+        pageNumber: page.pageNumber,
+        dir: 'Desc',
+      })
+      const completed = await fetchTxs(address, pageRange.from, pageRange.to)
+      return { pageRange, completed }
+    }
+
+    Promise.all([fetchPendingTxs(address), fetchCompleted()])
+      .then(([pending, { pageRange, completed }]) => actions.fetchResult({
         page,
-        result: Success({ pending, completed }),
+        result: Success({ pending, pageRange, completed }),
       }))
       .catch((error) => actions.fetchResult({ page, result: Failure(error.message) }))
 
@@ -88,17 +106,17 @@ export const rawTxsActions: TxsActions = {
   },
 
   fetchResult: ({ page, result }) => (state) => {
+    const newPage = {
+      ...page,
+      from: successOf(result).fmap((r) => r.pageRange.from).valueOr(page.from),
+      to: successOf(result).fmap((r) => r.pageRange.to).valueOr(page.to),
+      transactions: result,
+    }
     return {
       ...state,
       pages: {
         ...state.pages,
-        [page.address]: {
-          ...page,
-          to: successOf(result)
-            .fmap((txs) => txs.completed.length + page.from)
-            .valueOr(page.to),
-          transactions: result,
-        },
+        [page.address]: newPage,
       },
     }
   },

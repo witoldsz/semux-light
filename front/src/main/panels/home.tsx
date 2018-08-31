@@ -16,7 +16,7 @@ export interface HomeState {
   block: Maybe<BlockType>
   accounts: AccountType[]
   transactions: TransactionType[]
-  fetchTimeoutId: NodeJS.Timer | undefined
+  fetchTimeoutId: any
 }
 
 export const initialHomeState: HomeState = {

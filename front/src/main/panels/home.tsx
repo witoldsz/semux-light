@@ -4,9 +4,10 @@ import { ZERO, concat } from '../lib/utils'
 import { BlockType, fetchLatestBlock } from '../model/block'
 import { AccountType, fetchAccount } from '../model/account'
 import { Maybe, maybe } from 'tsmonad'
-import { fetchLastTxs, TransactionType, caseTypeOf } from '../model/transaction'
+import { TransactionType, caseTypeOf, fetchTxs } from '../model/transaction'
 import { localeDateTime, transfer, sem, addressAbbr } from '../lib/format'
 import { addresses, address1st, WalletState } from '../model/wallet'
+import { calculateRange } from '../lib/pagination'
 
 const MAX_TXS_SIZE = 5
 const FETCH_INTERVAL = 20000
@@ -30,7 +31,13 @@ export const initialHomeState: HomeState = {
 type AccountAndTxs = [AccountType, TransactionType[]]
 async function fetchAccAndTxs(address: string): Promise<AccountAndTxs> {
   const account = await fetchAccount(address)
-  const transactions = await fetchLastTxs(account, { page: 0, size: MAX_TXS_SIZE })
+  const pageRange = calculateRange({
+    totalCount: account.transactionCount,
+    pageNumber: 0,
+    pageSize: MAX_TXS_SIZE,
+    dir: 'Desc',
+  })
+  const transactions = await fetchTxs(account.address, pageRange.from, pageRange.to)
   return [account, transactions]
 }
 

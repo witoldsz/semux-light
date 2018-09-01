@@ -83,12 +83,6 @@ export async function fetchTxs(address: string, from: number, to: number): Promi
   })))
 }
 
-export async function fetchLastTxs(account: AccountType, { page, size }: { page: number, size: number }) {
-  const to = account.transactionCount - size * page
-  const from = Math.max(0, to - size)
-  return fetchTxs(account.address, from, to)
-}
-
 export async function fetchPendingTxs(address: string): Promise<TransactionType[]> {
   const path = `/v2.1.0/account/pending-transactions?address=${address}&from=0&to=999`
   const remotes = await exec<PendingTransactionTypeRemote[]>('GET', path)

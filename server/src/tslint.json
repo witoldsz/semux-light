@@ -13,6 +13,7 @@
     "no-empty": false,
     "member-access": false,
     "no-duplicate-imports": false,
+    "no-shadowed-variable": false,
     "member-ordering": false,
     "variable-name": false,
     "curly": false,

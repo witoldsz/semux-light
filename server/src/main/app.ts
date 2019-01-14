@@ -6,6 +6,8 @@ import * as path from 'path'
 import { settings } from './settings'
 import * as request from 'request-promise-native'
 import * as url from 'url'
+import * as fs from 'fs'
+import * as R from 'ramda'
 
 const staticsPath = path.join(__dirname, '..', '..', 'front', 'build')
 
@@ -23,29 +25,66 @@ async function main() {
 
   const corsHeader = (res: Response) => res.header('Access-Control-Allow-Origin', '*')
 
-  const proxyMiddleware = (req: Request, res: Response, next: NextFunction) => {
-    corsHeader(res)
-    proxy.web(req, res, undefined, next)
+  interface ProxyDef {
+    [method: string]: Array<'get' | 'post' | 'options'>
   }
 
-  app.get('/v2.1.0/info', proxyMiddleware)
-  app.get('/v2.1.0/account', proxyMiddleware)
-  app.get('/v2.1.0/account/transactions', proxyMiddleware)
-  app.get('/v2.1.0/account/pending-transactions', proxyMiddleware)
-  app.get('/v2.1.0/account/votes', proxyMiddleware)
-  app.get('/v2.1.0/delegates', proxyMiddleware)
-  app.get('/v2.1.0/latest-block', proxyMiddleware)
-  app.options('/v2.1.0/transaction/raw', (req, res) => {
-    corsHeader(res)
-    res.end()
+  const proxyDef: ProxyDef = {
+    '/v2.1.0/info': ['get'],
+    '/v2.1.0/account': ['get'],
+    '/v2.1.0/account/transactions': ['get'],
+    '/v2.1.0/account/pending-transactions': ['get'],
+    '/v2.1.0/account/votes': ['get'],
+    '/v2.1.0/delegates': ['get'],
+    '/v2.1.0/latest-block': ['get'],
+    '/v2.1.0/transaction/raw': ['post', 'options'],
+    '/v2.1.0/swagger.html': ['get'],
+    '/swagger-ui/*': ['get'],
+  }
+
+  const proxyMiddleware = (req: Request, res: Response, next: NextFunction) => {
+    if (req.method === 'OPTIONS') {
+      corsHeader(res).end()
+    } else {
+      proxy.web(req, corsHeader(res), undefined, next)
+    }
+  }
+
+  Object.entries(proxyDef).forEach(([path, methods]) => {
+    methods.forEach((method) => {
+      app[method](path, proxyMiddleware)
+    })
   })
-  app.post('/v2.1.0/transaction/raw', proxyMiddleware)
+
+  app.get('/v2.1.0/swagger.json', (req, res, next) => {
+    const auth = { user, pass }
+    request.get(url.resolve(address, 'v2.1.0/swagger.json'), { auth, json: true })
+      .then((orig) => {
+        const paths = R.pipe(
+          R.mapObjIndexed<any, any>((i, path) => {
+            const methods = proxyDef[`/v2.1.0${path}`]
+            return methods && R.pick(methods, i)
+          }),
+          R.filter(R.identity),
+          R.map(R.map(R.dissoc('security'))),
+        )(orig.paths)
+
+        res.json(R.pipe(
+          R.assocPath(['info', 'title'], 'Semux Online API'),
+          R.assoc('paths', paths),
+          R.dissoc('security'),
+          R.dissoc('securityDefinitions'),
+          R.dissoc('schemes'),
+        )(orig))
+      })
+      .catch(next)
+  })
 
   // coinmarketcap requirements
   app.get('/total-sem', (req, res) => {
     const infoUrl = url.resolve(address, 'v2.1.0/info')
     const delegatesUrl = url.resolve(address, 'v2.1.0/delegates')
-    const get = (u) => request.get(u, { auth: {user, pass}, json: true })
+    const get = (u) => request.get(u, { auth: { user, pass }, json: true })
 
     Promise
       .all([get(infoUrl), get(delegatesUrl)])
@@ -59,6 +98,7 @@ async function main() {
   })
 
   app.use((err, req, res, next) => {
+    console.log(err)
     res.status(500).json({
       success: false,
       message: `proxy server error: ${err.message}`,

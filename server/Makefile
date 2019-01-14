@@ -17,6 +17,7 @@ clean:
 	rm -rf dist build
 
 build/COMPILED: node_modules/INSTALLED $(shell find ./src -type f)
+	cp -R src/swagger build
 	tslint -p src -t codeFrame
 	tsc -p src/tsconfig.json
 	touch $@

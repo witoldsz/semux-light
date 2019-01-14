@@ -15,9 +15,11 @@
   "author": "Witold Szczerba",
   "license": "ISC",
   "dependencies": {
+    "@types/ramda": "0.25.46",
     "express": "4.16.3",
     "helmet": "^3.12.1",
     "http-proxy": "1.17.0",
+    "ramda": "0.26.1",
     "request": "^2.87.0",
     "request-promise-native": "^1.0.5"
   },
